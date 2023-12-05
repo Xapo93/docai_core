@@ -5,7 +5,7 @@
 	xmlns:n0="http://www.oracle.com/xml/ns/dbchangelog-ext" 
 	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
 	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
-	<changeSet id="constraint-vai_docai_document_labels_fk01" author="VAI" runOnChange="true"  >
+	<changeSet id="docai-constraint-vai_docai_document_labels_fk01" author="VAI" runOnChange="true"  >
 		<preConditions  onFail="MARK_RAN">
 			<sqlCheck  expectedResult="0">select count(*) from user_cons_columns where upper(constraint_name)=upper('vai_docai_document_labels_fk01');</sqlCheck>
 		</preConditions>

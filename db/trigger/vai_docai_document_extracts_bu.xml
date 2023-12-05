@@ -5,7 +5,7 @@
 	xmlns:n0="http://www.oracle.com/xml/ns/dbchangelog-ext" 
 	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
 	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
-	<changeSet id="trigger-vai_docai_document_extracts_bu" author="VAI" failOnError="true" runOnChange="true"    >
+	<changeSet id="docai-trigger-vai_docai_document_extracts_bu" author="VAI" failOnError="true" runOnChange="true"    >
 		<n0:createOracleTrigger objectName="VAI_DOCAI_DOCUMENT_EXTRACTS_BU" objectType="trigger" ownerName="VAI"   >
 			<n0:source><![CDATA[CREATE OR REPLACE EDITIONABLE TRIGGER "VAI_DOCAI_DOCUMENT_EXTRACTS_BU" 
 BEFORE UPDATE

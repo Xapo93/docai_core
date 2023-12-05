@@ -3,7 +3,7 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xmlns:n0="http://www.oracle.com/xml/ns/dbchangelog-ext" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
 	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
-	<changeSet id="constraint-docai_extract_labels_fk01" author="VAI" failOnError="true" runOnChange="true">
+	<changeSet id="docai-constraint-docai_extract_labels_fk01" author="VAI" failOnError="true" runOnChange="true">
 		<preConditions onFail="MARK_RAN">
 			<sqlCheck expectedResult="0">SELECT COUNT(*)
   FROM user_constraints t 
