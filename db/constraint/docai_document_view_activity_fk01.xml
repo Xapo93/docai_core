@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:n0="http://www.oracle.com/xml/ns/dbchangelog-ext" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
+	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
+	<changeSet id="constraint-docai_document_view_activity_fk01" author="VAI" failOnError="true" runOnChange="true">
+		<preConditions onFail="MARK_RAN">
+			<sqlCheck expectedResult="0">SELECT COUNT(*)
+  FROM user_constraints c
+  JOIN user_cons_columns cc ON cc.constraint_name = c.constraint_name
+  JOIN user_constraints rc ON rc.constraint_name = c.r_constraint_name
+  JOIN user_cons_columns rcc ON rcc.constraint_name =  rc.constraint_name
+ WHERE c.table_name = 'DOCAI_DOCUMENT_VIEW_ACTIVITY'
+   AND cc.column_name = 'DOCUMENT_ID'
+   AND c.constraint_type = 'R'
+   AND rc.table_name = 'VAI_DOCAI_DOCUMENTS'
+   AND rcc.column_name = 'DOCUMENT_ID';</sqlCheck>
+		</preConditions>
+		<n0:createOracleRefConstraint objectName="DOCAI_DOCUMENT_VIEW_ACTIVITY_FK01" objectType="REF_CONSTRAINT" ownerName="VAI">
+			<n0:source><![CDATA[
+  ALTER TABLE "DOCAI_DOCUMENT_VIEW_ACTIVITY" ADD CONSTRAINT "DOCAI_DOCUMENT_VIEW_ACTIVITY_FK01" FOREIGN KEY ("DOCUMENT_ID")
+	  REFERENCES "VAI_DOCAI_DOCUMENTS" ("DOCUMENT_ID") ENABLE]]></n0:source>
+		</n0:createOracleRefConstraint>
+	</changeSet>
+</databaseChangeLog>

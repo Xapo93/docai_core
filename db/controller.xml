@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+  <!---->
+  <!-- Type Specs 
+  <include relativeToChangelogFile="true" file="type_spec/controller.xml" />-->
+
+  <!-- Type Body -->
+
+  <!-- Sequence -->
+  <include relativeToChangelogFile="true" file="sequence/controller.xml" />
+
+  <!-- Directory -->
+
+  <!-- Cluster -->
+
+  <!-- Table -->
+  <include relativeToChangelogFile="true" file="table/controller.xml" />
+
+  <!-- Materialized View Log -->
+
+  <!-- Materialized View 
+  <include relativeToChangelogFile="true" file="materialized_view/controller.xml" />-->
+
+  <!-- View -->
+  <include relativeToChangelogFile="true" file="view/controller.xml" />
+
+  <!-- Dimension -->
+
+  <!-- Function -->
+
+  <!-- Procedure -->
+
+  <!-- Package Specs -->
+  <include relativeToChangelogFile="true" file="package_spec/controller.xml" />
+
+  <!-- DB Link -->
+
+  <!-- Synonym -->
+
+  <!-- Index -->
+  <include relativeToChangelogFile="true" file="index/controller.xml" />
+
+  <!-- Trigger -->
+  <include relativeToChangelogFile="true" file="trigger/controller.xml" />
+
+  <!-- Advance Queue 
+  <include relativeToChangelogFile="true" file="queue/controller.xml" />-->
+
+  <!-- Package Body -->
+  <include relativeToChangelogFile="true" file="package_body/controller.xml" />
+
+  <!-- Job  
+  <include relativeToChangelogFile="true" file="job/controller.xml" />-->
+
+  <!-- Third Party -->
+
+  <!-- Constraint -->
+  <include relativeToChangelogFile="true" file="constraint/controller.xml" />
+  
+  <!-- Seed  -->
+  <include relativeToChangelogFile="true" file="seed/controller.xml" />
+
+  <!-- Rest -->
+
+  <!-- Grant 
+  <include relativeToChangelogFile="true" file="grant/controller.xml" />-->
+</databaseChangeLog> 

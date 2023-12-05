@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog 
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns:n0="http://www.oracle.com/xml/ns/dbchangelog-ext" 
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
+	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
+	<changeSet id="trigger-docai_document_view_activity_bi" author="VAI" failOnError="true" runOnChange="true"    >
+		<n0:createOracleTrigger objectName="DOCAI_DOCUMENT_VIEW_ACTIVITY_BI" objectType="trigger" ownerName="VAI"   >
+			<n0:source><![CDATA[CREATE OR REPLACE EDITIONABLE TRIGGER "DOCAI_DOCUMENT_VIEW_ACTIVITY_BI" 
+BEFORE INSERT
+ON docai_document_view_activity
+FOR EACH ROW
+BEGIN
+  :new.crt_ts := SYSTIMESTAMP;
+  :new.crt_by := NVL(v('APP_USER'), USER);
+  :new.view_ts := NVL(:new.view_ts, SYSTIMESTAMP);
+END;
+]]></n0:source>
+		</n0:createOracleTrigger>
+	</changeSet>
+</databaseChangeLog>

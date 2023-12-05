@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog 
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns:n0="http://www.oracle.com/xml/ns/dbchangelog-ext" 
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
+	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
+	<changeSet id="0f0cfc09ec7634a09862ff7f66f6b5280565e672" author="(LFLORES)-Generated" failOnError="false"    >
+		<n0:createOraclePackageSpec objectName="DOCAI_APEX_API" objectType="package_spec" ownerName="LFLORES"   >
+			<n0:source><![CDATA[CREATE OR REPLACE EDITIONABLE PACKAGE "LFLORES"."DOCAI_APEX_API" AS
+  /*PROCEDURE enable_extract_queue(
+    p_extract_provider_id IN NUMBER
+  );*/
+
+  FUNCTION get_status_desc(p_status     IN VARCHAR2)
+  RETURN VARCHAR2;
+
+  FUNCTION get_status_step_desc(p_status    IN VARCHAR2)
+  RETURN VARCHAR2;
+
+  PROCEDURE process_documents(p_documents_collection  IN VARCHAR2,
+                              p_batch_id              OUT VARCHAR2,
+                              p_tenant_id             IN NUMBER DEFAULT v('G_TENANT_ID'));
+
+  FUNCTION post_extract(
+    p_document_id         IN NUMBER
+   ,p_prompt              IN CLOB
+   ,p_name                IN VARCHAR2
+   ,p_extract_provider_id IN NUMBER
+   ,p_llm_model           IN VARCHAR2
+   ,p_llm_temperature     IN NUMBER
+   ,p_response_format     IN CLOB       DEFAULT EMPTY_CLOB
+   ,p_system_prompt       IN VARCHAR2   DEFAULT NULL
+   ,p_streaming_ind       IN VARCHAR2   DEFAULT 'Y'
+   ,p_extract_type        IN VARCHAR2   DEFAULT NULL
+   ,p_tenant_id           IN NUMBER     DEFAULT V('G_TENANT_ID')
+  ) RETURN NUMBER;
+
+  PROCEDURE post_extract(
+    p_document_id         IN NUMBER
+   ,p_prompt              IN CLOB
+   ,p_name                IN VARCHAR2
+   ,p_extract_provider_id IN NUMBER
+   ,p_llm_model           IN VARCHAR2
+   ,p_llm_temperature     IN NUMBER
+   ,p_response_format     IN CLOB       DEFAULT EMPTY_CLOB
+   ,p_system_prompt       IN VARCHAR2   DEFAULT NULL
+   ,p_streaming_ind       IN VARCHAR2   DEFAULT 'Y'
+   ,p_extract_type        IN VARCHAR2   DEFAULT NULL
+   ,p_tenant_id           IN NUMBER     DEFAULT V('G_TENANT_ID')
+  );
+
+  FUNCTION post_extract(
+    p_document_id       IN NUMBER
+   ,p_prompt            IN CLOB
+   ,p_name              IN VARCHAR2   DEFAULT NULL
+   ,p_streaming_ind     IN VARCHAR2   DEFAULT 'Y'
+   ,p_tenant_id         IN NUMBER     DEFAULT V('G_TENANT_ID')
+  )RETURN NUMBER;
+
+  PROCEDURE post_extract(
+    p_document_id       IN NUMBER
+   ,p_prompt            IN CLOB
+   ,p_name              IN VARCHAR2   DEFAULT NULL
+   ,p_streaming_ind     IN VARCHAR2   DEFAULT 'Y'
+   ,p_tenant_id         IN NUMBER     DEFAULT V('G_TENANT_ID')
+  );
+
+  FUNCTION post_extract(
+    p_document_id         IN NUMBER,
+    p_extract_template_id IN NUMBER,
+    p_streaming_ind       IN VARCHAR2   DEFAULT 'Y',
+    p_tenant_id           IN NUMBER     DEFAULT V('G_TENANT_ID')
+  ) RETURN NUMBER;
+
+  PROCEDURE post_extract(
+    p_document_id         IN NUMBER,
+    p_extract_template_id IN NUMBER,
+    p_streaming_ind       IN VARCHAR2   DEFAULT 'Y',
+    p_tenant_id           IN NUMBER     DEFAULT V('G_TENANT_ID')
+  );
+
+  PROCEDURE on_extract_done(p_body IN CLOB);
+
+  PROCEDURE get_extracts_batch(p_username     IN VARCHAR2 DEFAULT NULL,
+                               p_batch_id     IN VARCHAR2 DEFAULT NULL,
+                               p_cnt          OUT NUMBER,
+                               p_pending_cnt  OUT NUMBER,
+                               p_error_cnt    OUT NUMBER,
+                               p_start_ts     OUT TIMESTAMP,
+                               p_last_upd_ts  OUT TIMESTAMP,
+                               p_tenant_id    IN NUMBER DEFAULT v('G_TENANT_ID'));
+
+  PROCEDURE get_docs_in_process_json(p_username   IN VARCHAR2 DEFAULT NULL,
+                                     p_batch_id   IN VARCHAR2 DEFAULT NULL,
+                                     p_tenant_id  IN NUMBER DEFAULT v('G_TENANT_ID'));
+
+  FUNCTION get_docs_in_process_cnt(p_username   IN VARCHAR2 DEFAULT NULL,
+                                   p_batch_id   IN VARCHAR2 DEFAULT NULL,
+                                   p_tenant_id  IN NUMBER DEFAULT v('G_TENANT_ID'))
+  RETURN NUMBER;
+
+  /*FUNCTION search_docs(p_near_text_concepts   IN VARCHAR2,
+                       p_limit                IN NUMBER DEFAULT NULL,
+                       p_tenant_id            IN NUMBER DEFAULT v('G_TENANT_ID'))
+  RETURN weaviate_document_tbl_t PIPELINED;*/
+
+  PROCEDURE delete_document(p_document_id IN NUMBER,
+                            p_tenant_id   IN NUMBER DEFAULT v('G_TENANT_ID'));
+
+  PROCEDURE delete_documents_list(p_document_id_list IN APEX_APPLICATION_GLOBAL.VC_ARR2,
+                                  p_tenant_id        IN NUMBER DEFAULT v('G_TENANT_ID'));
+
+  PROCEDURE delete_extract(p_extract_id IN NUMBER,
+                           p_tenant_id  IN NUMBER DEFAULT v('G_TENANT_ID'));
+
+  PROCEDURE register_view(p_document_id IN NUMBER,
+                          p_username    IN VARCHAR2  DEFAULT v('APP_USER'),
+                          p_view_ts     IN TIMESTAMP DEFAULT NULL,
+                          p_tenant_id   IN NUMBER DEFAULT v('G_TENANT_ID'));
+
+  PROCEDURE register_view(p_category_id IN NUMBER,
+                          p_username    IN VARCHAR2  DEFAULT v('APP_USER'),
+                          p_view_ts     IN TIMESTAMP DEFAULT NULL,
+                          p_tenant_id   IN NUMBER DEFAULT v('G_TENANT_ID'));
+
+  FUNCTION get_menu_query
+  RETURN VARCHAR2;
+
+END docai_apex_api;]]></n0:source>
+		</n0:createOraclePackageSpec>
+	</changeSet>
+</databaseChangeLog>

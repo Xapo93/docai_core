@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+  
+  <include relativeToChangelogFile="true" file="vai_docai_documents_bu.xml" />
+  <include relativeToChangelogFile="true" file="vai_docai_documents_bi.xml" />
+  <include relativeToChangelogFile="true" file="vai_docai_document_extracts_bi.xml" />
+  <include relativeToChangelogFile="true" file="vai_docai_document_extracts_bu.xml" />
+  <include relativeToChangelogFile="true" file="vai_docai_document_labels_bi.xml" />
+  <include relativeToChangelogFile="true" file="vai_docai_document_labels_bu.xml" />
+  <include relativeToChangelogFile="true" file="docai_document_category_biu.xml" />
+  <include relativeToChangelogFile="true" file="docai_entity_log_bi_trg.xml" />
+  <include relativeToChangelogFile="true" file="docai_entity_log_bu_trg.xml" />
+  <include relativeToChangelogFile="true" file="docai_extract_labels_bu.xml" />
+  <include relativeToChangelogFile="true" file="docai_extract_labels_bi.xml" />
+  <include relativeToChangelogFile="true" file="docai_document_tags_bi.xml" />
+  <include relativeToChangelogFile="true" file="docai_document_tags_bu.xml" />
+  <include relativeToChangelogFile="true" file="docai_service_documents_bi.xml" />
+  <include relativeToChangelogFile="true" file="docai_service_documents_bu.xml" />
+  <include relativeToChangelogFile="true" file="docai_document_category_schemas_bi.xml" />
+  <include relativeToChangelogFile="true" file="docai_document_category_schemas_bu.xml" />
+  <include relativeToChangelogFile="true" file="docai_document_view_activity_bu.xml" />
+  <include relativeToChangelogFile="true" file="docai_document_view_activity_bi.xml" />
+</databaseChangeLog> 

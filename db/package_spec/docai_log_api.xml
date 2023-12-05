@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:n0="http://www.oracle.com/xml/ns/dbchangelog-ext" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
+	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
+  <changeSet id="package_spec-docai_log_api" author="VAI" runOnChange="true">
+    <n0:createOraclePackageSpec objectName="DOCAI_LOG_API" objectType="package_spec" ownerName="VAI">
+      <n0:source><![CDATA[CREATE OR REPLACE EDITIONABLE PACKAGE "DOCAI_LOG_API" as
+  PROCEDURE log(
+    p_action            VARCHAR2,
+    p_source_id         NUMBER,
+    p_type              VARCHAR2,
+    p_log_lvl           VARCHAR2,
+    p_description       VARCHAR2,
+    p_title             VARCHAR2,
+    p_status_reason     VARCHAR2 DEFAULT NULL,
+    p_status_stacktrace CLOB     DEFAULT empty_clob()
+  );
+end;]]></n0:source>
+    </n0:createOraclePackageSpec>
+  </changeSet>
+</databaseChangeLog>

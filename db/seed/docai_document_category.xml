@@ -1,0 +1,38 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.6.xsd">
+   <changeSet author="VAI" id="docai_document_category-1" failOnError="true" runOnChange="true">
+		<preConditions onFail="MARK_RAN">
+			<sqlCheck expectedResult="0">select count(*) from DOCAI_DOCUMENT_CATEGORY where 1=1 and category_name ='Financial Document' </sqlCheck>
+		</preConditions>
+		<insert tableName="DOCAI_DOCUMENT_CATEGORY">
+            <column name="HANDLING_PROCEDURE" value="vai_docai_api.process_financial_document" />
+            <column name="DESCRIPTION" value="Financial Documents (invoice, receipt, check, po)" />
+            <column name="ACTIVE_IND" value="Y" />
+            <column name="CATEGORY_NAME" value="Financial Document" />
+        </insert>
+	</changeSet>
+	<changeSet author="VAI" id="docai_document_category-2" failOnError="true" runOnChange="true">
+		<preConditions onFail="MARK_RAN">
+			<sqlCheck expectedResult="0">select count(*) from DOCAI_DOCUMENT_CATEGORY where 1=1 and category_name ='Entity Information' </sqlCheck>
+		</preConditions>
+		<insert tableName="DOCAI_DOCUMENT_CATEGORY" >
+            <column name="HANDLING_PROCEDURE" />
+            <column name="DESCRIPTION" value=" w2, w9, business_card" />
+            <column name="ACTIVE_IND" value="Y" />
+            <column name="CATEGORY_NAME" value="Entity Information" />
+        </insert>
+	</changeSet>
+	<changeSet author="VAI" id="docai_document_category-3" failOnError="true" runOnChange="true">
+		<preConditions onFail="MARK_RAN">
+			<sqlCheck expectedResult="0">select count(*) from DOCAI_DOCUMENT_CATEGORY where 1=1 and category_name = 'Other'</sqlCheck>
+		</preConditions>
+		<insert tableName="DOCAI_DOCUMENT_CATEGORY">
+            <column name="HANDLING_PROCEDURE" />
+            <column name="DESCRIPTION" value="All other documents" />
+            <column name="ACTIVE_IND" value="Y" />
+            <column name="CATEGORY_NAME" value="Other" />
+        </insert>
+	</changeSet>
+</databaseChangeLog>

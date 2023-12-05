@@ -1,0 +1,1533 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog 
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns:n0="http://www.oracle.com/xml/ns/dbchangelog-ext" 
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
+	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
+	<changeSet id="e55d155b14713e389bfce7d4fdb32d1ac3f980a6" author="(LFLORES)-Generated" failOnError="false"    >
+		<n0:createOraclePackageBody objectName="DOCAI_API" objectType="package_body" ownerName="LFLORES"   >
+			<n0:source><![CDATA[CREATE OR REPLACE EDITIONABLE PACKAGE BODY "LFLORES"."DOCAI_API" AS
+  g_wss_url         VARCHAR2(1000) := vai_config_api.get('VAI_WEB_SOCKET_URL');
+  g_wss_wallet      VARCHAR2(1000) := vai_config_api.get('VAI_WEB_SOCKET_WALLET');
+  g_wss_wallet_pwd  VARCHAR2(1000) := vai_config_api.get('VAI_WEB_SOCKET_WALLET_PWD');
+
+  -------------------------------------------------------------------------------------------------------------------------------
+  -------------------------------------------------------------------------------------------------------------------------------
+  -- UTILITIES
+  -------------------------------------------------------------------------------------------------------------------------------
+  -------------------------------------------------------------------------------------------------------------------------------  
+  FUNCTION get_tenant_wss_room(p_tenant_id IN NUMBER)
+  RETURN VARCHAR2
+  IS
+    l_room VARCHAR2(4000);
+  BEGIN
+    l_room := 'DOCAI_T'||p_tenant_id;
+
+    RETURN l_room;
+  END;
+
+  FUNCTION get_document_services (p_document_id IN NUMBER)
+  RETURN JSON_ARRAY_T
+  IS 
+    l_services    JSON_ARRAY_T := JSON_ARRAY_T();
+    l_services_v  VARCHAR2(4000);
+  BEGIN
+    SELECT json_arrayagg(service_id)
+      INTO  l_services_v
+    FROM docai_service_documents
+    WHERE document_id = p_document_id;
+
+    IF l_services_v IS NOT NULL THEN
+      l_services := JSON_ARRAY_T(l_services_v);
+    END IF;
+
+    RETURN l_services;
+
+    EXCEPTION
+      WHEN NO_DATA_FOUND THEN
+        RETURN l_services;
+  END;
+
+  PROCEDURE notify_wss(
+    p_room   IN VARCHAR2,
+    p_event  IN VARCHAR2,
+    p_data   IN json_object_t DEFAULT NULL
+  )IS
+    l_data_j json_object_t;
+  BEGIN
+    IF p_data IS NULL THEN
+      l_data_j := json_object_t();
+    ELSE
+      l_data_j := p_data;
+    END IF;
+
+    wss_api.set_ws(p_url => g_wss_url);
+
+    wss_api.set_wallet(
+      p_wallet_path => g_wss_wallet
+     ,p_wallet_pwd  => g_wss_wallet_pwd
+    );
+
+    l_data_j.put('event', p_event);
+
+    wss_api.notify(
+      p_rooms_list => apex_t_varchar2(p_room)
+     ,p_data_J     => l_data_j
+    );
+
+  EXCEPTION
+    WHEN OTHERS THEN NULL;
+  END notify_wss;
+
+  FUNCTION blob_to_clob_base64(p_blob IN BLOB) RETURN CLOB
+  IS
+    POS         PLS_INTEGER         := 1;
+    --BUFFER      VARCHAR2 (32767);
+    L_RAW       RAW(32767);
+    RES         CLOB;
+    L_WIDTH     PLS_INTEGER         := (76 / 4 * 3)-9;
+  BEGIN
+    SYS.DBMS_LOB.CREATETEMPORARY(RES, TRUE);
+    SYS.DBMS_LOB.OPEN(RES, SYS.DBMS_LOB.LOB_READWRITE);
+
+    SYS.DBMS_LOB.READ(P_BLOB, L_WIDTH, POS, L_RAW);
+    RES := SYS.UTL_RAW.CAST_TO_VARCHAR2(SYS.UTL_ENCODE.BASE64_ENCODE(L_RAW));
+    POS := POS + L_WIDTH;
+
+    BEGIN
+      LOOP
+        SYS.DBMS_LOB.READ(P_BLOB, L_WIDTH, POS, L_RAW);
+        SYS.DBMS_LOB.APPEND(RES, SYS.UTL_RAW.CAST_TO_VARCHAR2( SYS.UTL_ENCODE.BASE64_ENCODE(L_RAW)));
+        POS := POS + L_WIDTH;
+      END LOOP;
+    EXCEPTION WHEN NO_DATA_FOUND THEN
+      NULL;
+    END;
+
+    RETURN RES;
+
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF RES IS NOT NULL THEN
+          SYS.DBMS_LOB.FREETEMPORARY( RES );
+      END IF;
+
+      RAISE;
+  END blob_to_clob_base64;
+
+  FUNCTION base64_clob_to_blob(p_clob IN CLOB) RETURN BLOB IS
+    l_blob          BLOB;
+    l_raw           RAW(32767);
+    l_start         PLS_INTEGER := 1;
+    l_buffer_size   PLS_INTEGER := 24000; -- Adjust size as needed, keeping in mind the limits of RAW
+    l_amount        PLS_INTEGER := 32000; -- Maximum size for DBMS_LOB.SUBSTR
+  BEGIN
+    -- Initialize an empty BLOB
+    DBMS_LOB.CREATETEMPORARY(l_blob, TRUE);
+
+    -- Process the CLOB in chunks
+    WHILE l_start < DBMS_LOB.GETLENGTH(p_clob) LOOP
+        -- Read a chunk of the Base64 CLOB
+        l_raw := UTL_RAW.CAST_TO_RAW(DBMS_LOB.SUBSTR(p_clob, l_buffer_size, l_start));
+
+        -- Append decoded RAW data to BLOB
+        DBMS_LOB.APPEND(l_blob, UTL_ENCODE.BASE64_DECODE(l_raw));
+
+        -- Move to the next chunk
+        l_start := l_start + l_buffer_size;
+    END LOOP;
+
+    RETURN l_blob;
+  END base64_clob_to_blob;
+
+  FUNCTION clob_to_base64(p_c IN CLOB)
+  RETURN CLOB
+  IS
+    l_b         BLOB;
+    l_base64_c  CLOB;
+
+    l_dest_offset  PLS_INTEGER := 1;
+    l_src_offset   PLS_INTEGER := 1;
+    l_lang_context PLS_INTEGER := DBMS_LOB.default_lang_ctx;
+    l_warning      PLS_INTEGER := DBMS_LOB.warn_inconvertible_char;
+  BEGIN
+    dbms_lob.createtemporary(lob_loc => l_b,
+                             cache   => TRUE);
+
+    dbms_lob.converttoblob(dest_lob     => l_b,
+                           src_clob     => p_c,
+                           amount       => DBMS_LOB.lobmaxsize,
+                           dest_offset  => l_dest_offset,
+                           src_offset   => l_src_offset,
+                           blob_csid    => DBMS_LOB.default_csid,
+                           lang_context => l_lang_context,
+                           warning      => l_warning);
+
+    l_base64_c := blob_to_clob_base64(l_b);
+
+    RETURN l_base64_c;
+  END clob_to_base64;
+
+  PROCEDURE call_webhook (
+    p_tenant_id     IN NUMBER
+   ,p_webhook_event IN VARCHAR
+   ,p_payload_j     IN JSON_OBJECT_T
+   ,p_ref_key       IN VARCHAR2
+   ,p_ref_id        IN NUMBER
+   ,p_services      IN JSON_ARRAY_T DEFAULT JSON_ARRAY_T()
+  )IS
+  BEGIN
+    docai_log_api.log(
+      p_action            => ''
+     ,p_source_id         => p_ref_id
+     ,p_type              => p_ref_key
+     ,p_log_lvl           => 'DEBUG'
+     ,p_description       => 'Webhook dispatch for '|| p_webhook_event
+     ,p_title             => 'Starting webhook dispatch for '||p_webhook_event
+    );
+
+
+    $IF $$DOCAI_STANDALONE IS NOT NULL $THEN
+        NULL;
+    $ELSE
+        IF NOT p_services.is_Null then
+          vai_webhook_dispatcher.call_webhook(
+            p_tenant_id         => p_tenant_id
+           ,p_webhook_event     => p_webhook_event
+           ,p_payload_j         => p_payload_j
+           ,p_ref_key           => p_ref_key
+           ,p_ref_id            => p_ref_id
+           ,p_service_list_ids  => p_services
+          );
+        ELSE
+          vai_webhook_dispatcher.call_webhook(
+            p_tenant_id     => p_tenant_id
+           ,p_webhook_event => p_webhook_event
+           ,p_payload_j     => p_payload_j
+           ,p_ref_key       => p_ref_key
+           ,p_ref_id        => p_ref_id
+        );
+       END IF;
+    $END
+
+
+    EXCEPTION
+      WHEN OTHERS THEN
+        docai_log_api.log(
+          p_action            => ''
+         ,p_source_id         => p_ref_id
+         ,p_type              => p_ref_key
+         ,p_log_lvl           => 'ERROR'
+         ,p_description       => ''
+         ,p_title             => 'Error while calling webhook'
+         ,p_status_reason     => SQLERRM
+         ,p_status_stacktrace => dbms_utility.format_error_stack
+        );
+  END;
+
+  PROCEDURE process_streaming_callback(p_tenant_id    IN NUMBER,
+                                       p_document_id  IN NUMBER,
+                                       p_extract_id   IN NUMBER,
+                                       p_event        IN VARCHAR2,
+                                       p_token        IN VARCHAR2,
+                                       p_content      IN CLOB DEFAULT empty_clob)
+  IS
+    l_wss_room VARCHAR2(4000) := get_tenant_wss_room(p_tenant_id => p_tenant_id);
+
+    l_data  json_object_t;
+    l_event VARCHAR2(4000) := 'DOCAI_'||upper(p_event);
+    l_document_id   NUMBER;
+    l_extract_id    NUMBER;
+  BEGIN
+    $IF $$DOCAI_STANDALONE IS NOT NULL $THEN
+        SELECT document_id, extract_id
+          INTO l_document_id,l_extract_id
+        FROM vai_docai_document_extracts
+        WHERE ref_extract_id = p_extract_id;
+    $END
+    docai_log_api.log(p_action            => ''
+                         ,p_source_id         => l_document_id
+                         ,p_type              => 'DOCAI_DOCUMENT'
+                         ,p_log_lvl           => 'DEBUG'
+                         ,p_description       => NULL
+                         ,p_title             => 'streaming received'||p_content);
+    l_data := json_object_t();
+
+    l_data.put('document_id', l_document_id);
+    l_data.put('extract_id', l_extract_id);
+    l_data.put('token', p_token);
+    l_data.put('content', p_content);
+
+    notify_wss(
+      p_room   => l_wss_room
+     ,p_event  => l_event
+     ,p_data   => l_data
+    );
+  END;
+
+  FUNCTION get_document_json_reply(
+    p_document_id    IN NUMBER
+   ,p_tenant_id      IN NUMBER
+  )RETURN JSON_OBJECT_T IS
+    l_document_response_j       JSON_OBJECT_T;
+    l_document                  CLOB;
+    l_document_contents         CLOB;
+    l_document_contents_base64  CLOB;
+  BEGIN
+    SELECT JSON_OBJECT(
+             'document_id'              IS d.document_id,
+             'filename'                 IS d.document_filename,  
+             'mime_type'                IS d.document_mime_type,
+             'status'                   IS d.status
+              RETURNING CLOB
+          ) AS document
+         ,d.document_content
+     INTO l_document
+         ,l_document_contents
+     FROM vai_docai_documents d
+    WHERE d.tenant_id = p_tenant_id
+      AND d.document_id = p_document_id
+      AND d.deleted_ind != 'Y';
+
+    l_document_contents_base64 := clob_to_base64(l_document_contents);
+
+    l_document_response_j := JSON_OBJECT_T(l_document);
+    l_document_response_j.put('document_content_base64', l_document_contents_base64);
+
+    RETURN l_document_response_j;
+  END get_document_json_reply;
+
+  FUNCTION get_extract_json_reply(
+    p_extract_id     IN NUMBER
+   ,p_document_id    IN NUMBER
+   ,p_tenant_id      IN NUMBER
+  )RETURN JSON_OBJECT_T IS
+    l_extract_response_j    JSON_OBJECT_T;
+    l_document_extract_j    JSON_OBJECT_T;
+    l_extract_status        VARCHAR2(128);
+    l_extract_template_key  VARCHAR2(256);
+    l_extract_response      CLOB;
+  BEGIN
+    $IF $$DOCAI_STANDALONE IS NULL $THEN
+        SELECT e.status
+              ,e.response
+              ,t.key      AS extract_template_key
+          INTO l_extract_status
+              ,l_extract_response
+              ,l_extract_template_key
+          FROM vai_docai_documents d
+          LEFT JOIN vai_docai_document_extracts e ON e.tenant_id = d.tenant_id AND e.document_id = d.document_id
+          LEFT JOIN docai_extract_templates t on t.extract_template_id = e.extract_template_id
+         WHERE d.tenant_id = p_tenant_id
+           AND d.document_id = p_document_id
+           AND e.extract_id = p_extract_id
+           AND d.deleted_ind != 'Y'
+           AND e.deleted_ind != 'Y';
+    $ELSE
+        SELECT e.status
+              ,e.response
+              ,NULL      AS extract_template_key
+          INTO l_extract_status
+              ,l_extract_response
+              ,l_extract_template_key
+          FROM vai_docai_documents d
+          LEFT JOIN vai_docai_document_extracts e ON e.tenant_id = d.tenant_id AND e.document_id = d.document_id
+         WHERE d.tenant_id = p_tenant_id
+           AND d.document_id = p_document_id
+           AND e.extract_id = p_extract_id
+           AND d.deleted_ind != 'Y'
+           AND e.deleted_ind != 'Y';
+    $END
+
+    l_document_extract_j := json_object_t();  
+    l_document_extract_j.put('extract_id', p_extract_id);
+    l_document_extract_j.put('extract_type', l_extract_template_key);
+    l_document_extract_j.put('status', l_extract_status);
+
+    BEGIN
+      IF l_extract_response IS NOT NULL THEN
+        l_extract_response_j := JSON_OBJECT_T(l_extract_response);
+        l_document_extract_j.put('extract', l_extract_response_j);
+      END IF;
+    EXCEPTION
+      WHEN OTHERS THEN
+        l_document_extract_j.put('extract', l_extract_response);
+    END;
+
+    RETURN l_document_extract_j;
+  END get_extract_json_reply;
+
+  -------------------------------------------------------------------------------------------------------------------------------
+  -------------------------------------------------------------------------------------------------------------------------------
+  -- EXTRACT LABELS
+  -------------------------------------------------------------------------------------------------------------------------------
+  -------------------------------------------------------------------------------------------------------------------------------  
+
+  PROCEDURE process_extract_labels(p_tenant_id IN NUMBER,
+                                   p_extract_id IN NUMBER)
+  IS
+    PRAGMA AUTONOMOUS_TRANSACTION;
+    l_res   CLOB;
+    l_res_j json_object_t;
+
+    l_response_j json_object_t;
+    l_structured_data_j json_object_t;
+
+
+    PROCEDURE insert_extract_label(p_key        IN VARCHAR2,
+                                   p_value      IN VARCHAR2,
+                                   p_label_id   OUT NUMBER,
+                                   p_parent_id  IN NUMBER DEFAULT NULL,
+                                   p_leaf_ind   IN VARCHAR2 DEFAULT 'N')
+    IS
+    BEGIN
+      INSERT INTO docai_extract_labels(extract_id, tenant_id, label_key, label_value, leaf_ind, parent_label_id)
+      VALUES(p_extract_id, p_tenant_id, p_key, p_value, p_leaf_ind, p_parent_id)
+      RETURN label_id INTO p_label_id;
+    END insert_extract_label;
+
+    PROCEDURE traverse_json(
+      p_key       IN VARCHAR2 DEFAULT NULL,
+      p_j         IN json_element_t,
+      p_type      IN VARCHAR2,
+      p_parent_id IN NUMBER DEFAULT NULL
+    )IS 
+      l_obj_j     json_object_t;
+      l_arr_j     json_array_t;
+      l_label_id  NUMBER;
+
+      l_keys      JSON_KEY_LIST;
+    BEGIN
+      CASE UPPER(TRIM(p_type))
+        WHEN 'OBJECT' THEN 
+          l_obj_j := TREAT(p_j AS json_object_t);
+
+          IF l_obj_j IS NOT NULL THEN
+            IF p_key IS NOT NULL THEN
+              insert_extract_label(p_key, NULL, l_label_id, p_parent_id);
+            END IF;      
+
+            l_keys := l_obj_j.get_keys;
+
+            FOR i IN 1..l_keys.COUNT
+            LOOP
+
+              traverse_json(l_keys(i), l_obj_j.get(l_keys(i)), l_obj_j.get_type(l_keys(i)), l_label_id);
+
+            END LOOP;
+          END IF;
+        WHEN 'ARRAY' THEN
+          l_arr_j := TREAT(p_j AS json_array_t);
+
+          IF p_key IS NOT NULL THEN
+            insert_extract_label(p_key, NULL, l_label_id, p_parent_id);
+          END IF;
+
+          FOR i IN 0..l_arr_j.get_size-1
+          LOOP
+            traverse_json('['||i||']', l_arr_j.get(i), l_arr_j.get_type(i), l_label_id);
+          END LOOP;
+        WHEN 'SCALAR' THEN
+          IF p_j.is_string THEN traverse_json(p_key, p_j, 'STRING', p_parent_id);
+          ELSIF p_j.is_number THEN traverse_json(p_key, p_j, 'NUMBER', p_parent_id);
+          ELSIF p_j.is_date THEN traverse_json(p_key, p_j, 'DATE', p_parent_id);
+          ELSIF p_j.is_timestamp THEN traverse_json(p_key, p_j, 'TIMESTAMP', p_parent_id);
+          ELSIF p_j.is_null THEN traverse_json(p_key, p_j, 'NULL', p_parent_id);
+          END IF;
+        WHEN 'STRING' THEN insert_extract_label(p_key, REPLACE(p_j.to_string,'"'), l_label_id, p_parent_id, 'Y');
+        WHEN 'NUMBER' THEN insert_extract_label(p_key, REPLACE(p_j.to_number,'"'), l_label_id, p_parent_id, 'Y');
+        WHEN 'DATE' THEN insert_extract_label(p_key, TO_CHAR(p_j.to_date,'MM/DD/YYYY HH24:MI:SS'), l_label_id, p_parent_id, 'Y');
+        WHEN 'TIMESTAMP' THEN insert_extract_label(p_key, TO_CHAR(p_j.to_timestamp, 'MM/DD/YYYY HH24:MI:SS.FF'), l_label_id, p_parent_id, 'Y');
+        WHEN 'NULL' THEN insert_extract_label(p_key, NULL, l_label_id, p_parent_id, 'Y');
+        ELSE insert_extract_label(p_key, 'Unknown data type. ['||p_type||']', l_label_id, p_parent_id, 'Y');
+      END CASE;
+    END traverse_json;
+  BEGIN
+    SELECT response
+      INTO l_res
+      FROM vai_docai_document_extracts
+     WHERE tenant_id = p_tenant_id
+       AND extract_id = p_extract_id;
+
+    l_res_j := json_object_t(l_res);
+
+    IF l_res_j.has('response') THEN
+      l_response_j := l_res_j.get_object('response');
+
+      IF l_response_j IS NOT NULL THEN
+        IF l_response_j.has('structured_data') THEN 
+          l_structured_data_j := l_response_j.get_object('structured_data');
+
+          traverse_json(NULL, l_structured_data_j, 'OBJECT');
+        END IF;
+      END iF;
+    END IF;
+    COMMIT;
+  EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+      RETURN; 
+  END process_extract_labels;
+
+  PROCEDURE execute_category_callback(
+    p_category_id IN NUMBER,
+    p_document_id IN NUMBER
+  )IS
+    l_category_name         VARCHAR2(256);
+    l_callback_procedure    VARCHAR2(256);
+    l_execute_statement     VARCHAR2(4000) := 'begin #CALLBACK_PROC#(p_document_id => :p_document_id);  end;';
+
+    l_status_reason         VARCHAR2(4000);
+    l_status_stacktrace     VARCHAR2(4000);
+  BEGIN
+    SELECT category_name,
+           handling_procedure 
+      INTO l_category_name,
+           l_callback_procedure
+      FROM docai_document_category
+     WHERE category_id = p_category_id;
+
+    IF l_callback_procedure IS NOT NULL THEN 
+      l_execute_statement := replace(l_execute_statement,'#CALLBACK_PROC#', l_callback_procedure);
+
+      docai_log_api.log(p_action            => ''
+                       ,p_source_id         => p_document_id
+                       ,p_type              => 'DOCAI_DOCUMENT'
+                       ,p_log_lvl           => 'DEBUG'
+                       ,p_description       => 'Executing category callback for '||l_category_name||' category_id: '||p_category_id||' '||l_callback_procedure
+                       ,p_title             => 'Executing category callback');   
+
+      EXECUTE IMMEDIATE l_execute_statement USING  p_document_id;
+    ELSE
+      docai_log_api.log(p_action            => ''
+                       ,p_source_id         => p_document_id
+                       ,p_type              => 'DOCAI_DOCUMENT'
+                       ,p_log_lvl           => 'DEBUG'
+                       ,p_description       => 'No category callback found for '||l_category_name||' category_id: '||p_category_id||' '||l_callback_procedure
+                       ,p_title             => 'Executing category callback');
+    END IF;
+  EXCEPTION
+    WHEN OTHERS THEN
+      l_status_reason := SQLERRM;
+      l_status_stacktrace := dbms_utility.format_error_stack;
+
+      docai_log_api.log(p_action            => ''
+                       ,p_source_id         => p_document_id
+                       ,p_type              => 'DOCAI_DOCUMENT'
+                       ,p_log_lvl           => 'DEBUG'
+                       ,p_description       => 'Unexpected error in executing cateogry callback for '||l_category_name||' category_id: '||p_category_id||' '||l_callback_procedure
+                       ,p_title             => 'Unexpected error in category callback'
+                       ,p_status_reason     => l_status_reason
+                       ,p_status_stacktrace => l_status_stacktrace);
+  END execute_category_callback;
+
+  -------------------------------------------------------------------------------------------------------------------------------
+  -------------------------------------------------------------------------------------------------------------------------------
+  -- DOCUMENT MANAGEMENT
+  -------------------------------------------------------------------------------------------------------------------------------
+  -------------------------------------------------------------------------------------------------------------------------------  
+  PROCEDURE bg_process_documents(p_tenant_id  IN NUMBER,
+                                 p_batch_id   IN VARCHAR2)
+  IS
+  PRAGMA AUTONOMOUS_TRANSACTION;
+    l_batch_id VARCHAR2(4000) := p_batch_id;
+
+    /* Rest variables*/
+    l_res                    json_object_t;
+    l_vai_api_wallet         VARCHAR2( 256 );
+    l_vai_api_wallet_pwd     VARCHAR2( 256 );
+    l_client                 VARCHAR2( 256 );
+    l_secret                 VARCHAR2( 256 );
+    l_docai_document_id      NUMBER;
+    l_document_status        VARCHAR2(128);
+    l_categories             CLOB;
+
+    CURSOR in_process(p_id IN NUMBER)
+    IS
+      SELECT status
+        FROM vai_docai_documents
+       WHERE tenant_id = p_tenant_id
+         AND document_id = p_id
+      FOR UPDATE OF status, ocr_json, ocr_text, status_additional_info, status_stacktrace,docai_ref_document_id;
+  BEGIN
+    $IF $$DOCAI_STANDALONE IS NOT NULL $THEN
+        FOR d IN (SELECT document_id,
+                         document_filename,
+                         document_content,
+                         document_mime_type,
+                         ocr_json,
+                         ocr_text,
+                         status
+                    FROM vai_docai_documents 
+                   WHERE 1=1
+                     AND tenant_id  = p_tenant_id
+                     AND status = 'NEW'
+                     AND batch_id = p_batch_id)
+        LOOP
+            OPEN in_process(d.document_id);
+
+            FETCH in_process INTO l_document_status;
+
+            UPDATE vai_docai_documents
+               SET status = 'IN_PROCESS'
+             WHERE CURRENT OF in_process;
+
+            COMMIT; 
+
+            SELECT replace(APEX_ESCAPE.JSON(json_arrayagg(category_path RETURNING CLOB)),'\"','''')
+              INTO l_categories
+              FROM docai_document_category_hierarchy_v
+             WHERE active_ind = 'Y';
+
+            l_vai_api_wallet := ap_config_api.get(
+              p_key => 'VAI_API_WALLET'
+            );
+            l_vai_api_wallet_pwd := ap_config_api.get(
+              p_key => 'VAI_API_WALLET_PWD'
+            );
+            l_client := ap_config_api.get(
+              p_key => 'VAI_API_CLIENT'
+            );
+            l_secret := ap_config_api.get(
+              p_key => 'VAI_API_SECRET'
+            );
+
+            vai_sdk_api.set_wallet(
+              p_wallet     => l_vai_api_wallet
+            ,p_wallet_pwd => l_vai_api_wallet_pwd
+            );
+
+            vai_sdk_api.set_credentials(
+              p_client_id     => l_client
+            ,p_client_secret => l_secret
+            );
+
+            notify_wss(
+              p_room   => get_tenant_wss_room(p_tenant_id => p_tenant_id)
+             ,p_event  => 'DOCAI_DOCUMENT_PROCESSING_STARTED'
+            );
+
+            l_res := vai_sdk_docai_api.async_upload(
+                p_filename      => d.document_filename
+                ,p_file_contents => d.document_content
+                ,p_mime_type     => d.document_mime_type
+                ,p_service_key   => 'VAI_AP'
+                ,p_categories    => l_categories
+            );
+
+            l_docai_document_id := l_res.get_number('document_id');
+
+            UPDATE vai_docai_documents
+            SET docai_ref_document_id = l_docai_document_id
+            WHERE CURRENT OF in_process;
+
+            COMMIT;
+        END LOOP;
+    $ELSE
+        dbms_scheduler.create_job(job_name            => 'VAI_DOCAI_UPLOAD_'||l_batch_id,
+                                  job_type            => 'PLSQL_BLOCK',
+                                  job_action          => 'BEGIN docai_engine_api.process_documents(p_tenant_id => '||p_tenant_id||', p_batch_id => '''||l_batch_id||'''); END;',
+                                  start_date          => systimestamp,
+                                  enabled             => TRUE);
+    $END                             
+  END bg_process_documents;
+
+  PROCEDURE process_document_categorization(
+    p_tenant_id   IN NUMBER,
+    p_document_id IN NUMBER,
+    p_extract_id  IN NUMBER
+  )IS
+    PRAGMA AUTONOMOUS_TRANSACTION;
+    l_extract_result      CLOB;
+    l_document_id         NUMBER;
+    l_category            VARCHAR2(128);
+    l_title               VARCHAR2(1024);
+    l_summary             VARCHAR2(4000);
+    l_category_id         NUMBER;
+    l_category_name       VARCHAR2(1000);
+    l_extract_result_j    JSON_OBJECT_T;
+    l_response            CLOB;
+    l_response_j          JSON_OBJECT_T;
+    l_document_res        JSON_OBJECT_T;
+    l_extract_status      VARCHAR2(128);
+    l_extract_status_additional_info  VARCHAR2(4000);
+    l_extract_status_stacktrace       VARCHAR2(4000);
+    l_services            JSON_ARRAY_T;
+    l_wss_room            VARCHAR2(1000) := get_tenant_wss_room(p_tenant_id => p_tenant_id);
+    l_wss_data            JSON_OBJECT_T := JSON_OBJECT_T();
+
+    l_status_additional_info  VARCHAR2(4000);
+    l_status_stacktrace       VARCHAR2(4000);
+  BEGIN
+    SELECT response
+          ,document_id
+          ,status
+          ,status_additional_info
+          ,status_stacktrace
+      INTO l_extract_result
+          ,l_document_id
+          ,l_extract_status
+          ,l_extract_status_additional_info
+          ,l_extract_status_stacktrace
+      FROM vai_docai_document_extracts
+     WHERE tenant_id = p_tenant_id
+       AND document_id = p_document_id
+       AND extract_id = p_extract_id;
+
+    docai_log_api.log(
+        p_action            => ''
+       ,p_source_id         => l_document_id
+       ,p_type              => 'DOCAI_DOCUMENT'
+       ,p_log_lvl           => 'DEBUG'
+       ,p_description       => 'Document categorization extract ID: '||p_extract_id||' status: '||l_extract_status
+       ,p_title             => 'Processing Document categorization'
+      );
+
+    l_wss_data := JSON_OBJECT_T();
+    l_wss_data.put('document_id', p_document_id);
+
+    l_services := get_document_services(l_document_id);
+    l_document_res := JSON_OBJECT_T();
+    l_document_res.put('document', get_document_json_reply(p_document_id,p_tenant_id));
+
+    IF l_extract_status = 'COMPLETED' THEN
+      docai_log_api.log(
+        p_action            => ''
+       ,p_source_id         => l_document_id
+       ,p_type              => 'DOCAI_DOCUMENT'
+       ,p_log_lvl           => 'DEBUG'
+       ,p_description       => NULL
+       ,p_title             => 'Document Categorization extract completed successfully'
+      ); 
+
+      l_extract_result_j := JSON_OBJECT_T(l_extract_result);
+
+      IF l_extract_result_j.has('response') THEN
+        l_response_j := l_extract_result_j.get_object('response');
+
+        -- If trying to obtain the response in object type does not work
+        -- attempt to get it as CLOB for cleanup of escaping characters like \"
+        IF l_response_j IS NULL THEN 
+          l_response := l_extract_result_j.get_clob('response');
+
+          IF l_response IS NOT NULL THEN
+            l_response := REPLACE(l_response,'\"','"');
+          END IF;
+
+          BEGIN
+            l_response_j := JSON_OBJECT_T(l_response);
+          EXCEPTION
+            WHEN OTHERS THEN 
+              NULL;
+          END;
+        END IF;
+
+        IF l_response_j IS NOT NULL THEN
+          l_category := l_response_j.get_string('document_category');
+          l_title := l_response_j.get_string('title');
+          l_summary := l_response_j.get_string('summary');
+        ELSE
+          docai_log_api.log(
+            p_action            => ''
+           ,p_source_id         => l_document_id
+           ,p_type              => 'DOCAI_DOCUMENT'
+           ,p_log_lvl           => 'DEBUG'
+           ,p_description       => NULL
+           ,p_title             => 'Extract for categorization is missing structured response'
+          );
+        END IF;
+      END IF;
+
+      BEGIN
+        SELECT category_id,
+               category_name 
+          INTO l_category_id,
+               l_category_name
+          FROM docai_document_category_hierarchy_v
+         WHERE category_path = l_category;
+      EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+          NULL;
+      END;
+
+      UPDATE vai_docai_documents 
+         SET status = 'COMPLETED'
+            ,title = l_title
+            ,summary = l_summary
+            ,category_id = l_category_id 
+       WHERE tenant_id = p_tenant_id
+         AND document_id = l_document_id; 
+      COMMIT;
+
+      IF l_category_id IS NOT NULL THEN
+        docai_log_api.log(
+          p_action            => ''
+         ,p_source_id         => l_document_id
+         ,p_type              => 'DOCAI_DOCUMENT'
+         ,p_log_lvl           => 'INFO'
+         ,p_description       => 'Document categorized as '||l_category_name
+         ,p_title             => 'Document categorization completed'
+        );   
+      ELSE
+        docai_log_api.log(
+          p_action            => ''
+         ,p_source_id         => l_document_id
+         ,p_type              => 'DOCAI_DOCUMENT'
+         ,p_log_lvl           => 'INFO'
+         ,p_description       => 'Document could not be categorized'
+         ,p_title             => 'Document categorization completed'
+        ); 
+      END IF;
+
+      BEGIN
+        process_extract_labels(
+          p_extract_id   => p_extract_id
+         ,p_tenant_id    => p_tenant_id
+        );
+      EXCEPTION
+        WHEN OTHERS THEN
+          NULL;
+      END;
+
+      notify_wss(
+        p_room   => l_wss_room
+       ,p_event  => 'DOCAI_DOCUMENT_PROCESSING_COMPLETED'
+       ,p_data   => l_wss_data
+      );
+
+      call_webhook(
+        p_tenant_id     => p_tenant_id
+       ,p_webhook_event => 'DOCAI_DOCUMENT_PROCESSING_COMPLETED'
+       ,p_payload_j     => l_document_res
+       ,p_ref_key       => 'DOCAI_DOCUMENT'
+       ,p_ref_id        => p_document_id
+      );
+
+      BEGIN
+        execute_category_callback(
+          p_category_id   =>  l_category_id,
+          p_document_id   =>  l_document_id
+        );
+      EXCEPTION
+        WHEN OTHERS THEN NULL;
+      END;
+    ELSIF l_extract_status = 'ERROR' THEN
+      docai_log_api.log(
+        p_action            => ''
+       ,p_source_id         => l_document_id
+       ,p_type              => 'DOCAI_DOCUMENT'
+       ,p_log_lvl           => 'INFO'
+       ,p_description       => NULL
+       ,p_title             => 'Document Categorization failed'
+      ); 
+
+      docai_log_api.log(
+        p_action            => ''
+       ,p_source_id         => l_document_id
+       ,p_type              => 'DOCAI_DOCUMENT'
+       ,p_log_lvl           => 'DEBUG'
+       ,p_description       => NULL
+       ,p_title             => 'Document Categorization extract failed'
+      ); 
+
+      UPDATE vai_docai_documents
+         SET status = 'ERROR'
+            ,status_additional_info = l_extract_status_additional_info
+            ,status_stacktrace = l_extract_status_stacktrace
+       WHERE tenant_id = p_tenant_id
+         AND document_id = p_document_id;
+      COMMIT;
+
+      notify_wss(
+        p_room  => l_wss_room
+       ,p_event => 'DOCAI_DOCUMENT_PROCESSING_ERROR'
+       ,p_data  => l_wss_data
+      );
+
+      call_webhook(
+        p_tenant_id     => p_tenant_id
+       ,p_webhook_event => 'DOCAI_DOCUMENT_PROCESSING_ERROR'
+       ,p_payload_j     => l_document_res
+       ,p_ref_key       => 'DOCAI_DOCUMENT'
+       ,p_ref_id        => p_document_id
+      );
+    ELSE 
+      docai_log_api.log(
+        p_action            => ''
+       ,p_source_id         => l_document_id
+       ,p_type              => 'DOCAI_DOCUMENT'
+       ,p_log_lvl           => 'DEBUG'
+       ,p_description       => NULL
+       ,p_title             => 'Document Categorization extract in status '||l_extract_status||' ignored'
+      ); 
+    END IF;
+  EXCEPTION 
+    WHEN OTHERS THEN 
+      ROLLBACK;
+
+      l_status_additional_info := DBMS_UTILITY.FORMAT_ERROR_STACK;
+      l_status_stacktrace := DBMS_UTILITY.FORMAT_ERROR_BACKTRACE;
+
+      docai_log_api.log(
+        p_action            => ''
+       ,p_source_id         => l_document_id
+       ,p_type              => 'DOCAI_DOCUMENT'
+       ,p_log_lvl           => 'INFO'
+       ,p_description       => NULL
+       ,p_title             => 'Document Categorization failed'
+      ); 
+
+      docai_log_api.log(
+        p_action            => ''
+       ,p_source_id         => l_document_id
+       ,p_type              => 'DOCAI_DOCUMENT'
+       ,p_log_lvl           => 'DEBUG'
+       ,p_description       => NULL
+       ,p_title             => 'Unexpected error occurred when processing Document Categorization'
+       ,p_status_reason     => l_status_additional_info
+       ,p_status_stacktrace => l_status_stacktrace
+      ); 
+
+      RAISE;
+  END process_document_categorization;
+
+  PROCEDURE insert_doc_tag(p_document_id     IN NUMBER,
+                           p_tag             IN VARCHAR2,
+                           p_tenant_id       IN NUMBER)
+  IS
+  BEGIN
+    INSERT INTO DOCAI_DOCUMENT_TAGS(document_id, tag, tenant_id)
+    VALUES (p_document_id,p_tag,p_tenant_id);
+
+    docai_log_api.log(p_action            => ''
+                     ,p_source_id         => p_document_id
+                     ,p_type              => 'DOCAI_DOCUMENT'
+                     ,p_log_lvl           => 'DEBUG'
+                     ,p_description       => 'Tag created: '||p_tag
+                     ,p_title             => 'New tag created');
+
+  END insert_doc_tag;
+
+  PROCEDURE assign_service( 
+    p_document_id     IN NUMBER
+   ,p_service_id      IN NUMBER
+   ,p_tenant_id       IN NUMBER
+  )IS
+    PRAGMA AUTONOMOUS_TRANSACTION;
+  BEGIN
+    IF p_service_id IS NOT NULL THEN
+      INSERT INTO docai_service_documents(document_id, service_id, tenant_id)
+      VALUES (p_document_id,p_service_id,p_tenant_id);
+      COMMIT;
+
+      docai_log_api.log(
+        p_action            => ''
+       ,p_source_id         => p_document_id
+       ,p_type              => 'DOCAI_DOCUMENT'
+       ,p_log_lvl           => 'DEBUG'
+       ,p_description       => 'Service assigned ID: '||p_service_id||' assigned to Document ID: '||p_document_id
+       ,p_title             => 'Service assigned to Document'
+      );
+    END IF;
+  END assign_service;
+
+  PROCEDURE register_document(p_tenant_id     IN NUMBER
+                              ,p_filename      IN VARCHAR2
+                              ,p_content       IN CLOB
+                              ,p_mime_type     IN VARCHAR2
+                              ,p_org_id        IN NUMBER DEFAULT NULL
+                              ,p_location_id   IN NUMBER DEFAULT NULL
+                              ,p_department_id IN NUMBER DEFAULT NULL
+                              ,p_categories    IN CLOB DEFAULT EMPTY_CLOB
+                              ,p_tags          IN apex_application_global.vc_arr2 DEFAULT apex_application_global.c_empty_vc_arr2
+                              ,p_services      IN apex_application_global.n_arr DEFAULT apex_application_global.c_empty_n_arr
+                              ,p_batch_id      IN OUT VARCHAR2
+                              ,p_document_id   OUT NUMBER)
+  IS
+    l_b BLOB;
+    l_dest_offset    INTEGER := 1;
+    l_src_offset     INTEGER := 1;
+    l_lang_context   INTEGER := DBMS_LOB.DEFAULT_LANG_CTX;
+    l_warning        INTEGER;
+    l_amount         INTEGER := DBMS_LOB.LOBMAXSIZE;
+    l_blob_csid      INTEGER := DBMS_LOB.DEFAULT_CSID;
+        l_document_id    NUMBER;
+  BEGIN
+    dbms_lob.createtemporary(lob_loc => l_b,
+                             cache   => TRUE);
+
+    dbms_lob.converttoblob(dest_lob     => l_b,
+                           src_clob     => p_content,
+                           amount       => l_amount,
+                           dest_offset  => l_dest_offset,
+                           src_offset   => l_src_offset,
+                           blob_csid    => l_blob_csid,
+                           lang_context => l_lang_context,
+                           warning      => l_warning);
+
+    register_document(p_tenant_id     => p_tenant_id
+                      ,p_filename      => p_filename
+                      ,p_content       => l_b
+                      ,p_mime_type     => p_mime_type
+                      ,p_batch_id      => p_batch_id
+                      ,p_org_id        => p_org_id
+                      ,p_location_id   => p_location_id
+                      ,p_department_id => p_department_id
+                      ,p_categories    => p_categories
+                      ,p_tags          => p_tags
+                      ,p_services      => p_services
+                      ,p_document_id   => l_document_id);
+  END register_document;
+
+  PROCEDURE register_document(p_tenant_id     IN NUMBER
+                              ,p_filename      IN VARCHAR2
+                              ,p_content       IN BLOB
+                              ,p_mime_type     IN VARCHAR2
+                              ,p_org_id        IN NUMBER DEFAULT NULL
+                              ,p_location_id   IN NUMBER DEFAULT NULL
+                              ,p_department_id IN NUMBER DEFAULT NULL
+                              ,p_categories    IN CLOB DEFAULT EMPTY_CLOB
+                              ,p_tags          IN apex_application_global.vc_arr2 DEFAULT apex_application_global.c_empty_vc_arr2
+                              ,p_services      IN apex_application_global.n_arr DEFAULT apex_application_global.c_empty_n_arr
+                              ,p_batch_id      IN OUT VARCHAR2
+                              ,p_document_id   OUT NUMBER)
+  IS
+    PRAGMA AUTONOMOUS_TRANSACTION;
+  BEGIN
+    IF vai_tenants_api.check_service_is_active(p_tenant_key => vai_tenants_api.get_tenant_key(p_tenant_id), p_service_key => 'VAI_DOC_AI') THEN
+      IF p_batch_id IS NULL THEN
+        p_batch_id := p_tenant_id||'_'||TO_CHAR(SYSTIMESTAMP, 'YYYYMMDDHH24MISSFF')||'_'||vai_docai_batch_id_s.nextval;
+      END IF;
+
+      INSERT INTO vai_docai_documents(document_filename, document_content, document_mime_type, batch_id, tenant_id, org_id, location_id, department_id,category_options)
+      VALUES(p_filename, p_content, p_mime_type, p_batch_id, p_tenant_id, p_org_id, p_location_id, p_department_id,p_categories)
+      RETURNING document_id INTO p_document_id;
+      COMMIT;
+
+      docai_log_api.log(
+        p_action            => ''
+       ,p_source_id         => p_document_id
+       ,p_type              => 'DOCAI_DOCUMENT'
+       ,p_log_lvl           => 'INFO'
+       ,p_description       => 'New document created'
+       ,p_title             => 'Document created'
+      );
+
+      IF p_tags is not null then
+        for i in 1..p_tags.count loop
+          insert_doc_tag(p_document_id      => p_document_id,
+                          p_tag              => p_tags(i),
+                          p_tenant_id        => p_tenant_id);
+        END LOOP;
+      END IF;
+
+      IF p_services is not null then
+        FOR i IN 1..p_services.COUNT LOOP
+          assign_service(p_document_id      => p_document_id,
+                             p_service_id       => p_services(i),
+                             p_tenant_id        => p_tenant_id);
+        END LOOP;
+      END IF;
+
+    ELSE
+      RAISE_APPLICATION_ERROR(-20001, 'Document AI service is not enabled for the tenancy');
+    END IF;
+  EXCEPTION
+    WHEN OTHERS THEN
+      ROLLBACK;
+      RAISE;
+  END register_document;
+
+  FUNCTION process_document(
+    p_tenant_id     IN NUMBER
+   ,p_filename      IN VARCHAR2
+   ,p_content       IN BLOB
+   ,p_mime_type     IN VARCHAR2
+   ,p_org_id        IN NUMBER DEFAULT NULL
+   ,p_location_id   IN NUMBER DEFAULT NULL
+   ,p_department_id IN NUMBER DEFAULT NULL
+   ,p_categories    IN CLOB DEFAULT EMPTY_CLOB
+   ,p_tags          IN apex_application_global.vc_arr2 DEFAULT apex_application_global.c_empty_vc_arr2
+   ,p_services      IN apex_application_global.n_arr DEFAULT apex_application_global.c_empty_n_arr
+   ,p_batch_id      IN OUT VARCHAR2
+  )RETURN NUMBER IS
+    l_document_id NUMBER;
+  BEGIN
+    register_document(
+      p_tenant_id     => p_tenant_id
+     ,p_filename      => p_filename
+     ,p_content       => p_content
+     ,p_mime_type     => p_mime_type
+     ,p_org_id        => p_org_id
+     ,p_location_id   => p_location_id
+     ,p_department_id => p_department_id
+     ,p_categories    => p_categories
+     ,p_tags          => p_tags
+     ,p_services      => p_services
+     ,p_batch_id      => p_batch_id
+     ,p_document_id   => l_document_id
+    );
+
+    IF l_document_id IS NULL THEN
+      RAISE_APPLICATION_ERROR(-20001,'Document Ai service is not enable');
+    ELSE
+      bg_process_documents( 
+          p_tenant_id  => p_tenant_id
+        ,p_batch_id   => p_batch_id
+        );
+    END IF;
+
+    RETURN l_document_id;
+  END process_document;
+
+  PROCEDURE delete_document(
+    p_tenant_id   IN NUMBER
+   ,p_document_id IN NUMBER
+  )IS
+    l_wss_room  VARCHAR2(4000) := get_tenant_wss_room(p_tenant_id => p_tenant_id);
+    l_wss_data  JSON_OBJECT_T;
+  BEGIN
+    UPDATE vai_docai_documents
+       SET deleted_ind = 'Y'
+     WHERE tenant_id = p_tenant_id
+       AND document_id = p_document_id;
+
+    l_wss_data := JSON_OBJECT_T();
+    l_wss_data.put('document_id', p_document_id);
+
+    notify_wss(
+      p_room   => l_wss_room
+     ,p_event  => 'DOCAI_DOCUMENT_DELETED'
+     ,p_data   => l_wss_data
+    );
+  END delete_document;
+  -------------------------------------------------------------------------------------------------------------------------------
+  -------------------------------------------------------------------------------------------------------------------------------
+  -- EXTRACT MANAGEMENT
+  -------------------------------------------------------------------------------------------------------------------------------
+  -------------------------------------------------------------------------------------------------------------------------------  
+
+  FUNCTION register_extract(
+    p_tenant_id           IN NUMBER
+   ,p_document_id         IN NUMBER
+   ,p_extract_provider_id IN NUMBER
+   ,p_llm_model           IN VARCHAR2     DEFAULT NULL
+   ,p_llm_temperature     IN VARCHAR2     DEFAULT NULL
+   ,p_prompt              IN CLOB         DEFAULT EMPTY_CLOB
+   ,p_system_prompt       IN VARCHAR2     DEFAULT NULL
+   ,p_response_format     IN CLOB         DEFAULT EMPTY_CLOB
+   ,p_name                IN VARCHAR2     DEFAULT NULL
+   ,p_callback_procedure  IN VARCHAR2     DEFAULT NULL
+   ,p_extract_template_id IN NUMBER       DEFAULT NULL
+   ,p_extract_type        IN VARCHAR2     DEFAULT NULL
+   ,p_response            IN CLOB         DEFAULT EMPTY_CLOB
+   ,p_ref_extract_id      IN NUMBER       DEFAULT NULL
+   ,p_streaming           IN BOOLEAN      DEFAULT FALSE
+   ,p_submitted_ts        IN TIMESTAMP    DEFAULT NULL
+   ,p_submitted_by        IN VARCHAR2     DEFAULT NULL
+   ,p_skip_enqueue        IN BOOLEAN      DEFAULT FALSE
+  )RETURN NUMBER IS
+    PRAGMA AUTONOMOUS_TRANSACTION;
+
+    l_extract_id            NUMBER;
+
+    l_extract_queue         VARCHAR2(256);
+    l_ocr_txt               CLOB;
+    l_response_format       CLOB;
+
+    l_extract_provider_key  VARCHAR2(256);
+    l_streaming_ind         VARCHAR2(1) := CASE WHEN p_streaming THEN 'Y' ELSE 'N' END;
+
+    l_extract_provider_id   NUMBER;
+    l_llm_model             VARCHAR2(100);
+    l_llm_temperature       VARCHAR2(100);
+
+    /* Rest variables*/
+    l_res                    json_object_t;
+    l_res_format             json_object_t;
+    l_vai_api_wallet         VARCHAR2( 256 );
+    l_vai_api_wallet_pwd     VARCHAR2( 256 );
+    l_client                 VARCHAR2( 256 );
+    l_secret                 VARCHAR2( 256 );
+    l_docai_ref_document_id  NUMBER;
+    l_docai_extract_id      NUMBER;
+    l_wss_data json_object_t;
+  BEGIN
+    IF vai_tenants_api.check_service_is_active(p_tenant_key => vai_tenants_api.get_tenant_key(p_tenant_id), p_service_key => 'VAI_DOC_AI') THEN
+      $IF $$DOCAI_STANDALONE IS NULL $THEN
+        SELECT d.ocr_text
+          INTO l_ocr_txt
+          FROM vai_docai_documents d
+        WHERE d.tenant_id = p_tenant_id
+          AND d.document_id = p_document_id;
+
+        BEGIN
+          IF p_extract_provider_id IS NOT NULL THEN
+              SELECT provider_key
+                INTO l_extract_provider_key
+                FROM docai_extract_providers
+              WHERE extract_provider_id = p_extract_provider_id;
+              l_extract_provider_id := p_extract_provider_id;
+          ELSE 
+
+              l_extract_provider_key := vai_service_config_api.get(
+                                          p_name          => 'DOCAI.EXTRACT.DEFAULT.PROVIDER_KEY'
+                                        ,p_service_name  => 'VAI_DOC_AI'
+                                      );
+              SELECT extract_provider_id
+                INTO l_extract_provider_id
+                FROM docai_extract_providers
+              WHERE upper(provider_key) = upper(l_extract_provider_key);
+
+          END IF;
+        EXCEPTION 
+          WHEN NO_DATA_FOUND THEN
+
+            RAISE_APPLICATION_ERROR(-20001, 'Extract Provider not found');
+        END;
+
+        CASE
+          WHEN l_extract_provider_key IN ('OPENAI','ANTHROPIC') THEN
+            IF l_ocr_txt IS NULL THEN
+              RAISE_APPLICATION_ERROR(-20001, 'OCR is not available');
+            END IF;
+
+            IF p_llm_model IS NULL THEN
+              l_llm_model := vai_service_config_api.get(
+                                  p_name          => 'DOCAI.EXTRACT.DEFAULT.LLM_MODEL'
+                                ,p_service_name  => 'VAI_DOC_AI'
+                              );
+              IF l_llm_model IS NULL THEN
+                  RAISE_APPLICATION_ERROR(-20001, 'Missing extract LLM Model');
+              END IF;
+            ELSE
+              l_llm_model := p_llm_model;
+            END IF;
+
+            IF p_prompt IS NULL THEN
+              RAISE_APPLICATION_ERROR(-20001, 'Missing extract Prompt');
+            END IF;
+
+            IF p_llm_temperature IS NULL THEN
+              l_llm_temperature := vai_service_config_api.get(
+                                  p_name          => 'DOCAI.EXTRACT.DEFAULT.LLM_MODEL_TEMPERATURE'
+                                ,p_service_name  => 'VAI_DOC_AI'
+                              );
+              IF l_llm_temperature IS NULL THEN
+                  RAISE_APPLICATION_ERROR(-20001, 'Missing extract LLM Model Temperature');
+              END IF; 
+            ELSE
+              l_llm_temperature := p_llm_temperature;
+            END IF;
+          ELSE NULL;
+        END CASE;
+      $END
+
+
+      INSERT INTO vai_docai_document_extracts(tenant_id, document_id, system_prompt, prompt, llm_model, llm_temperature, response_format, status, name, callback_procedure, extract_template_id, extract_provider_id,extract_type, streaming_ind, submitted_ts, submitted_by,response,ref_extract_id)
+      VALUES(p_tenant_id, p_document_id, p_system_prompt, p_prompt, l_llm_model, l_llm_temperature, p_response_format, 'NEW', p_name,p_callback_procedure,p_extract_template_id, l_extract_provider_id,p_extract_type, l_streaming_ind, p_submitted_ts, p_submitted_by,p_response,p_ref_extract_id)
+      RETURNING extract_id INTO l_extract_id;
+
+      IF NOT p_skip_enqueue THEN
+        $IF $$DOCAI_STANDALONE IS NOT NULL $THEN
+
+          SELECT docai_ref_document_id INTO l_docai_ref_document_id
+          FROM vai_docai_documents
+          WHERE document_id = p_document_id;
+
+          l_vai_api_wallet := ap_config_api.get(
+            p_key => 'VAI_API_WALLET'
+          );
+          l_vai_api_wallet_pwd := ap_config_api.get(
+            p_key => 'VAI_API_WALLET_PWD'
+          );
+          l_client := ap_config_api.get(
+            p_key => 'VAI_API_CLIENT'
+          );
+          l_secret := ap_config_api.get(
+            p_key => 'VAI_API_SECRET'
+          );
+
+          vai_sdk_api.set_wallet(
+            p_wallet     => l_vai_api_wallet
+          ,p_wallet_pwd => l_vai_api_wallet_pwd
+          );
+
+          vai_sdk_api.set_credentials(
+            p_client_id     => l_client
+          ,p_client_secret => l_secret
+          );
+
+          IF dbms_lob.getlength(p_response_format) > 0 THEN
+            l_res_format := JSON_OBJECT_T.parse(p_response_format);
+          END IF;
+
+          l_res := vai_sdk_docai_api.async_extract(p_document_id        => l_docai_ref_document_id
+                                                  ,p_system_prompt      => p_system_prompt
+                                                  ,p_prompt             => p_prompt
+                                                  ,p_llm_model          => p_llm_model
+                                                  ,p_llm_temperature    => p_llm_temperature
+                                                  ,p_response_format    => l_res_format
+          );
+
+          l_docai_extract_id := l_res.get_number('extract_id');
+
+          l_wss_data := json_object_t();
+
+          l_wss_data.put('document_id', p_document_id);
+          l_wss_data.put('extract_id', l_docai_extract_id);
+
+          notify_wss(
+            p_room   => get_tenant_wss_room(p_tenant_id => p_tenant_id)
+           ,p_event  => 'DOCAI_DOCUMENT_EXTRACT_START'
+           ,p_data   => l_wss_data
+          );
+
+          UPDATE vai_docai_document_extracts
+          SET ref_extract_id = l_docai_extract_id
+          WHERE extract_id = l_extract_id;
+        $ELSE
+          docai_engine_api.enqueue_extract(
+              p_tenant_id   => p_tenant_id
+              ,p_document_id => p_document_id
+              ,p_extract_id  => l_extract_id
+          );
+        $END
+      END IF;
+
+      COMMIT;
+    ELSE
+      RAISE_APPLICATION_ERROR(-20001, 'Document AI service is not enabled for the tenancy');
+    END IF;
+
+    RETURN l_extract_id;
+  EXCEPTION
+    WHEN OTHERS THEN 
+      ROLLBACK;
+      RAISE;
+  END register_extract;
+
+  FUNCTION register_extract(
+    p_tenant_id           IN NUMBER
+   ,p_document_id         IN NUMBER
+   ,p_extract_provider_id IN NUMBER
+   ,p_llm_model           IN VARCHAR2       DEFAULT NULL
+   ,p_llm_temperature     IN VARCHAR2       DEFAULT 0
+   ,p_prompt              IN CLOB           DEFAULT EMPTY_CLOB
+   ,p_system_prompt       IN VARCHAR2       DEFAULT NULL
+   ,p_response_format     IN JSON_OBJECT_T  DEFAULT NULL
+   ,p_name                IN VARCHAR2       DEFAULT NULL
+   ,p_callback_procedure  IN VARCHAR2       DEFAULT NULL
+   ,p_extract_template_id IN NUMBER         DEFAULT NULL
+   ,p_extract_type        IN VARCHAR2       DEFAULT NULL
+   ,p_response            IN CLOB           DEFAULT EMPTY_CLOB
+   ,p_ref_extract_id      IN NUMBER         DEFAULT NULL
+   ,p_streaming           IN BOOLEAN        DEFAULT FALSE
+   ,p_submitted_ts        IN TIMESTAMP      DEFAULT NULL
+   ,p_submitted_by        IN VARCHAR2       DEFAULT NULL
+   ,p_skip_enqueue        IN BOOLEAN      DEFAULT FALSE
+  )RETURN NUMBER IS
+    l_extract_id      NUMBER;
+    l_response_format CLOB;
+  BEGIN
+    IF p_response_format IS NOT NULL THEN
+      l_response_format := p_response_format.to_clob;
+    END IF;
+
+    l_extract_id := register_extract(
+                      p_tenant_id            => p_tenant_id
+                     ,p_document_id          => p_document_id
+                     ,p_extract_provider_id  => p_extract_provider_id
+                     ,p_llm_model            => p_llm_model
+                     ,p_llm_temperature      => p_llm_temperature
+                     ,p_prompt               => p_prompt
+                     ,p_system_prompt        => p_system_prompt
+                     ,p_response_format      => l_response_format
+                     ,p_name                 => p_name
+                     ,p_callback_procedure   => p_callback_procedure
+                     ,p_extract_template_id  => p_extract_template_id
+                     ,p_extract_type         => p_extract_type
+                     ,p_response             => p_response
+                     ,p_ref_extract_id       => p_ref_extract_id
+                     ,p_streaming            => p_streaming
+                     ,p_submitted_ts         => p_submitted_ts
+                     ,p_submitted_by         => p_submitted_by
+                     ,p_skip_enqueue         => p_skip_enqueue
+                    );
+    RETURN l_extract_id;
+  END register_extract;
+
+--needs to be here not supported on premise
+  FUNCTION register_extract_from_template(
+    p_template_id            IN NUMBER
+   ,p_document_id            IN NUMBER
+   ,p_tenant_id              IN NUMBER
+   ,p_callback_procedure     IN VARCHAR2  DEFAULT NULL
+   ,p_streaming              IN BOOLEAN   DEFAULT FALSE
+   ,p_substitution_key       IN apex_application_global.vc_arr2 DEFAULT apex_application_global.c_empty_vc_arr2
+   ,p_substitution_values    IN apex_application_global.vc_arr2 DEFAULT apex_application_global.c_empty_vc_arr2
+   ,p_submitted_ts           IN TIMESTAMP DEFAULT NULL
+   ,p_submitted_by           IN VARCHAR2  DEFAULT NULL
+   ,p_skip_enqueue           IN BOOLEAN   DEFAULT FALSE
+  ) RETURN NUMBER IS
+    l_extract_id NUMBER;
+  BEGIN
+    $IF $$DOCAI_STANDALONE IS NOT NULL $THEN
+      RAISE_APPLICATION_ERROR(-20001,'Extracts from template are not supported in standalone mode');
+      RETURN NULL;
+    $ELSE
+
+      l_extract_id := docai_engine_api.register_extract_from_template(
+                        p_template_id            => p_template_id
+                      ,p_document_id            => p_document_id
+                      ,p_tenant_id              => p_tenant_id
+                      ,p_callback_procedure     => p_callback_procedure
+                      ,p_streaming              => p_streaming
+                      ,p_substitution_key       => p_substitution_key
+                      ,p_substitution_values    => p_substitution_values
+                      ,p_submitted_ts           => p_submitted_ts
+                      ,p_submitted_by           => p_submitted_by
+                      ,p_skip_enqueue           => p_skip_enqueue 
+                      );
+      RETURN l_extract_id;
+    $END
+
+  END register_extract_from_template;
+
+  PROCEDURE register_extract_from_template(
+    p_template_id            IN NUMBER
+   ,p_document_id            IN NUMBER
+   ,p_tenant_id              IN NUMBER
+   ,p_callback_procedure     IN VARCHAR2  DEFAULT NULL
+   ,p_streaming              IN BOOLEAN   DEFAULT FALSE
+   ,p_substitution_key       IN apex_application_global.vc_arr2 DEFAULT apex_application_global.c_empty_vc_arr2
+   ,p_substitution_values    IN apex_application_global.vc_arr2 DEFAULT apex_application_global.c_empty_vc_arr2
+   ,p_submitted_ts           IN TIMESTAMP DEFAULT NULL
+   ,p_submitted_by           IN VARCHAR2  DEFAULT NULL
+   ,p_skip_enqueue           IN BOOLEAN   DEFAULT FALSE
+  ) IS
+    l_extract_id NUMBER;
+  BEGIN
+    l_extract_id := register_extract_from_template(
+                      p_template_id            => p_template_id
+                     ,p_document_id            => p_document_id
+                     ,p_tenant_id              => p_tenant_id
+                     ,p_callback_procedure     => p_callback_procedure
+                     ,p_streaming              => p_streaming
+                     ,p_substitution_key       => p_substitution_key
+                     ,p_substitution_values    => p_substitution_values
+                     ,p_submitted_ts           => p_submitted_ts
+                     ,p_submitted_by           => p_submitted_by
+                     ,p_skip_enqueue           => p_skip_enqueue 
+                    );
+  END register_extract_from_template;
+
+  -------------------------------------------------------------------------------------------------------------------------------
+  -------------------------------------------------------------------------------------------------------------------------------
+  -- STANDALONE MANAGEMENT
+  -------------------------------------------------------------------------------------------------------------------------------
+  -------------------------------------------------------------------------------------------------------------------------------  
+
+  PROCEDURE process_webhook(p_content_body          IN CLOB) 
+  IS
+    l_res                   JSON_OBJECT_T;
+    l_res_extract           JSON_OBJECT_T;
+    l_res_extract_c         CLOB;
+    l_status                VARCHAR2(1000);
+    l_docai_ref_document_id NUMBER;
+    l_ref_extract_id        NUMBER;
+    l_document_id           NUMBER;
+    l_extract_id            NUMBER;
+    l_tenant_id             NUMBER;
+    l_wss_data json_object_t;
+  BEGIN
+    l_res := JSON_OBJECT_T.parse(p_content_body);
+    IF l_res.get_string('notification_type') = 'DOCAI_DOCUMENT_EXTRACT_COMPLETED' THEN
+
+        l_ref_extract_id := l_res.get_object('payload').get_number('extract_id');
+        l_docai_ref_document_id := l_res.get_object('payload').get_object('document').get_number('document_id');
+        BEGIN
+            SELECT document_id,tenant_id into l_document_id,l_tenant_id
+            FROM vai_docai_documents
+            WHERE docai_ref_document_id = l_docai_ref_document_id;
+
+            EXCEPTION
+                WHEN NO_DATA_FOUND THEN
+                    raise_application_error(-20001,'Document not found');
+        END;
+        BEGIN
+            SELECT extract_id into l_extract_id
+            FROM vai_docai_document_extracts
+            WHERE ref_extract_id = l_ref_extract_id;
+
+            EXCEPTION
+                WHEN NO_DATA_FOUND THEN
+                    NULL;
+        END;
+        dbms_output.put_line('l_extract_id: '||l_extract_id);
+        IF l_extract_id IS NULL THEN
+            IF l_res.get_object('payload').get_string('extract_type') = 'GENERAL_CLASSIFICATION' THEN
+                l_res_extract := l_res.get_object('payload').get_object('extract');
+                l_extract_id := register_extract(
+                    p_tenant_id           => l_tenant_id
+                   ,p_document_id         => l_document_id
+                   ,p_extract_provider_id => NULL
+                   ,p_name                => 'General Classification'
+                   ,p_extract_type        => 'GENERAL_CLASSIFICATION'
+                   ,p_response            => l_res_extract.to_Clob
+                   ,p_ref_extract_id      => l_ref_extract_id
+                   ,p_skip_enqueue        => TRUE);
+
+                l_status := l_res.get_object('payload').get_string('status');
+
+                UPDATE vai_docai_document_extracts
+                SET status = l_status
+                WHERE ref_extract_id = l_ref_extract_id;
+
+                UPDATE vai_docai_documents
+                   SET categorization_extract_id = l_extract_id
+                 WHERE tenant_id = l_tenant_id
+                   AND document_id =l_document_id;
+
+                COMMIT;
+
+                process_document_categorization(p_tenant_id => l_tenant_id
+                                                ,p_document_id =>l_document_id
+                                                ,p_extract_id => l_extract_id);
+
+                notify_wss(
+                    p_room   => get_tenant_wss_room(p_tenant_id => l_tenant_id)
+                   ,p_event  => 'DOCAI_DOCUMENT_PROCESSING_COMPLETED'
+                  );
+
+            END IF;
+         ELSE
+            l_res_extract := l_res.get_object('payload').get_object('extract');
+            l_res_extract_c := l_res_extract.to_Clob;
+            l_status := l_res.get_object('payload').get_string('status');
+
+            UPDATE vai_docai_document_extracts
+            SET response = l_res_extract_c
+                ,status = l_status
+            WHERE ref_extract_id = l_ref_extract_id;
+
+            l_wss_data := json_object_t();
+
+            l_wss_data.put('document_id', l_document_id);
+            l_wss_data.put('extract_id', l_extract_id);
+
+            notify_wss(
+                p_room   => get_tenant_wss_room(p_tenant_id => l_tenant_id)
+               ,p_event  => 'DOCAI_DOCUMENT_EXTRACT_COMPLETED'
+               ,p_data   => l_wss_data
+            );
+        END IF;
+    END IF;
+  END;
+
+
+
+END DOCAI_API;]]></n0:source>
+		</n0:createOraclePackageBody>
+	</changeSet>
+</databaseChangeLog>
