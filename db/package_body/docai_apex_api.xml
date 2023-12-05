@@ -5,7 +5,7 @@
 	xmlns:n0="http://www.oracle.com/xml/ns/dbchangelog-ext" 
 	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
 	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
-	<changeSet id="package_body-docai_apex_api" author="VAI" runOnChange="true"  >
+	<changeSet id="package_body-docai_apex_api" author="VAI" failOnError="true" runOnChange="true"    >
 		<n0:createOraclePackageBody objectName="DOCAI_APEX_API" objectType="package_body" ownerName="VAI"   >
 			<n0:source><![CDATA[CREATE OR REPLACE EDITIONABLE PACKAGE BODY "DOCAI_APEX_API" AS
 
@@ -85,7 +85,7 @@
                       d.filename,
                       d.mime_type);
 
-      /*docai_api.register_document(p_tenant_id => p_tenant_id
+      docai_api.register_document(p_tenant_id => p_tenant_id
                                   ,p_filename => d.filename
                                   ,p_content => d.content
                                   ,p_mime_type => d.mime_type
@@ -94,7 +94,7 @@
                                   ,p_department_id => nv('APP_DEPARTMENT_ID')
                                   ,p_services      => l_services
                                   ,p_batch_id => l_batch_id
-                                  ,p_document_id => l_document_id);*/
+                                  ,p_document_id => l_document_id);
 
       apex_debug.info('Registered document ''%s'' [''%s''] for Document AI processing successfully with Document AI ID [''%s''] in batch [''%s'']',
                       d.filename,
@@ -106,10 +106,10 @@
     apex_debug.info('Invoking Document AI processing for registered documents in batch [''%s'']',
                     l_batch_id);
 
-    /*docai_api.bg_process_documents(
+    docai_api.bg_process_documents(
       p_tenant_id   => p_tenant_id
      ,p_batch_id   => l_batch_id
-    );*/
+    );
 
   EXCEPTION 
     WHEN OTHERS THEN
@@ -145,7 +145,7 @@
       'p_streaming_ind', p_streaming_ind
     );
 
-    /*l_extract_id := docai_api.register_extract(
+    l_extract_id := docai_api.register_extract(
                       p_tenant_id           => p_tenant_id
                      ,p_document_id         => p_document_id
                      ,p_extract_provider_id => p_extract_provider_id
@@ -157,12 +157,12 @@
                      ,p_name                => p_name
                      ,p_extract_type        => p_extract_type
                      ,p_streaming           => CASE p_streaming_ind WHEN 'Y' THEN TRUE ELSE FALSE END
-                    );*/
+                    );
 
     RETURN l_extract_id;
-  EXCEPTION
+  /*EXCEPTION
     WHEN OTHERS THEN
-      RAISE_APPLICATION_ERROR(-20001, 'Unexpected error in extraction. ' || SQLERRM);
+      RAISE_APPLICATION_ERROR(-20001, 'Unexpected error in extraction. ' || SQLERRM);*/
   END post_extract;
 
     PROCEDURE post_extract(
@@ -229,51 +229,61 @@
                                    ,p_service_name  => 'VAI_DOC_AI'
                                  );
       BEGIN
-        NULL;
-       /* SELECT  extract_provider_id
-          INTO l_extract_provider_id
-          FROM docai_extract_providers
-         WHERE provider_key = l_default_extract_key;*/
+        $IF $$DOCAI_STANDALONE IS NOT NULL $THEN
+            NULL;
+        $ELSE
+            SELECT  extract_provider_id
+              INTO l_extract_provider_id
+              FROM docai_extract_providers
+             WHERE provider_key = l_default_extract_key;
 
-      EXCEPTION
-        WHEN NO_DATA_FOUND THEN
-          IF l_default_extract_key IS NOT NULL THEN
-            APEX_DEBUG.ERROR('Document AI Default Extract Provider configured is not a valid provider');
-          ELSE
-            APEX_DEBUG.ERROR('Document AI Default Extract Provider is not configured');
-          END IF;
+          EXCEPTION
+            WHEN NO_DATA_FOUND THEN
+              IF l_default_extract_key IS NOT NULL THEN
+                APEX_DEBUG.ERROR('Document AI Default Extract Provider configured is not a valid provider');
+              ELSE
+                APEX_DEBUG.ERROR('Document AI Default Extract Provider is not configured');
+              END IF;
 
-          RAISE_APPLICATION_ERROR(-20001, 'Insights are currently not available, please contact support');
+              RAISE_APPLICATION_ERROR(-20001, 'Insights are currently not available, please contact support');
+        $END
       END;
 
       BEGIN
-        NULL;
-        /*SELECT llm_model
-          INTO l_llm_model
-          FROM docai_extract_provider_llm_models
-         WHERE extract_provider_id = l_extract_provider_id
-           AND llm_model = l_default_llm_model;*/
+        $IF $$DOCAI_STANDALONE IS NOT NULL $THEN
+            NULL;
+        $ELSE
+            SELECT llm_model
+              INTO l_llm_model
+              FROM docai_extract_provider_llm_models
+             WHERE extract_provider_id = l_extract_provider_id
+               AND llm_model = l_default_llm_model;
 
-      EXCEPTION
-        WHEN NO_DATA_FOUND THEN
-          IF l_default_llm_model IS NOT NULL THEN
-            APEX_DEBUG.ERROR('Document AI Default LLM Model configured is not a valid Extract Provider''s LLM Model');
-          ELSE
-            APEX_DEBUG.ERROR('Document AI Default LLM Model is not configured');
-          END IF;
+          EXCEPTION
+            WHEN NO_DATA_FOUND THEN
+              IF l_default_llm_model IS NOT NULL THEN
+                APEX_DEBUG.ERROR('Document AI Default LLM Model configured is not a valid Extract Provider''s LLM Model');
+              ELSE
+                APEX_DEBUG.ERROR('Document AI Default LLM Model is not configured');
+              END IF;
 
-          RAISE_APPLICATION_ERROR(-20001, 'Insights are currently not available, please contact support');
+              RAISE_APPLICATION_ERROR(-20001, 'Insights are currently not available, please contact support');
+        $END
       END;
 
-      IF l_llm_model_temperature IS NULL THEN
-        APEX_DEBUG.ERROR('Document AI Default LLM Model Temperature is not configured');
-        RAISE_APPLICATION_ERROR(-20001, 'Insights are currently not available, please contact support');
-      END IF;
+      $IF $$DOCAI_STANDALONE IS NULL $THEN
+          IF l_llm_model_temperature IS NULL THEN
+            APEX_DEBUG.ERROR('Document AI Default LLM Model Temperature is not configured');
+            RAISE_APPLICATION_ERROR(-20001, 'Insights are currently not available, please contact support');
+          END IF;
+      $END
 
-      IF l_default_system_prompt IS NULL THEN 
-        APEX_DEBUG.ERROR('Document AI Default LLM Model Temperature is not configured');
-        RAISE_APPLICATION_ERROR(-20001, 'Insights are currently not available, please contact support');
-      END IF;
+      $IF $$DOCAI_STANDALONE IS NULL $THEN
+          IF l_default_system_prompt IS NULL THEN 
+            APEX_DEBUG.ERROR('Document AI Default LLM Model Temperature is not configured');
+            RAISE_APPLICATION_ERROR(-20001, 'Insights are currently not available, please contact support');
+          END IF;
+      $END
 
       RETURN post_extract(
                 p_document_id         => p_document_id
@@ -630,8 +640,8 @@
                        'p_document_id', p_document_id,
                        'p_tenant_id', p_tenant_id );
 
-    /*docai_api.delete_document(p_tenant_id   => p_tenant_id,
-                                  p_document_id => p_document_id);*/
+    docai_api.delete_document(p_tenant_id   => p_tenant_id,
+                                  p_document_id => p_document_id);
   END delete_document;
 
   /*

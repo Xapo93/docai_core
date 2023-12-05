@@ -5,9 +5,9 @@
 	xmlns:n0="http://www.oracle.com/xml/ns/dbchangelog-ext" 
 	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
 	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
-	<changeSet id="0868abb0fc0dd9a8ed55cd7ecb7558b87c3a67f6" author="(LFLORES)-Generated" failOnError="false"    >
-		<n0:createOraclePackageSpec objectName="DOCAI_API" objectType="package_spec" ownerName="LFLORES"   >
-			<n0:source><![CDATA[CREATE OR REPLACE EDITIONABLE PACKAGE "LFLORES"."DOCAI_API" AS
+	<changeSet id="package_spec-docai_api" author="VAI" failOnError="true" runOnChange="true"    >
+		<n0:createOraclePackageSpec objectName="DOCAI_API" objectType="package_spec" ownerName="VAI"   >
+			<n0:source><![CDATA[CREATE OR REPLACE EDITIONABLE PACKAGE "DOCAI_API" AS
 
   -------------------------------------------------------------------------------------------------------------------------------
   -------------------------------------------------------------------------------------------------------------------------------
@@ -129,7 +129,7 @@
                           ,p_extract_template_id IN NUMBER       DEFAULT NULL
                           ,p_extract_type        IN VARCHAR2     DEFAULT NULL
                           ,p_response            IN CLOB         DEFAULT EMPTY_CLOB
-                          ,p_ref_extract_id      IN NUMBER       DEFAULT NULL
+                          ,p_docai_ref_extract_id      IN NUMBER       DEFAULT NULL
                           ,p_streaming           IN BOOLEAN      DEFAULT FALSE
                           ,p_submitted_ts        IN TIMESTAMP    DEFAULT NULL
                           ,p_submitted_by        IN VARCHAR2     DEFAULT NULL
@@ -149,7 +149,7 @@
                           ,p_extract_template_id IN NUMBER         DEFAULT NULL
                           ,p_extract_type        IN VARCHAR2       DEFAULT NULL
                           ,p_response            IN CLOB           DEFAULT EMPTY_CLOB
-                          ,p_ref_extract_id      IN NUMBER         DEFAULT NULL
+                          ,p_docai_ref_extract_id      IN NUMBER         DEFAULT NULL
                           ,p_streaming           IN BOOLEAN        DEFAULT FALSE
                           ,p_submitted_ts        IN TIMESTAMP      DEFAULT NULL
                           ,p_submitted_by        IN VARCHAR2       DEFAULT NULL

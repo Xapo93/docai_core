@@ -5,9 +5,9 @@
 	xmlns:n0="http://www.oracle.com/xml/ns/dbchangelog-ext" 
 	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
 	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
-	<changeSet id="e55d155b14713e389bfce7d4fdb32d1ac3f980a6" author="(LFLORES)-Generated" failOnError="false"    >
-		<n0:createOraclePackageBody objectName="DOCAI_API" objectType="package_body" ownerName="LFLORES"   >
-			<n0:source><![CDATA[CREATE OR REPLACE EDITIONABLE PACKAGE BODY "LFLORES"."DOCAI_API" AS
+	<changeSet id="package_body-docai_api" author="VAI" failOnError="true" runOnChange="true"    >
+		<n0:createOraclePackageBody objectName="DOCAI_API" objectType="package_body" ownerName="VAI"   >
+			<n0:source><![CDATA[CREATE OR REPLACE EDITIONABLE PACKAGE BODY "DOCAI_API" AS
   g_wss_url         VARCHAR2(1000) := vai_config_api.get('VAI_WEB_SOCKET_URL');
   g_wss_wallet      VARCHAR2(1000) := vai_config_api.get('VAI_WEB_SOCKET_WALLET');
   g_wss_wallet_pwd  VARCHAR2(1000) := vai_config_api.get('VAI_WEB_SOCKET_WALLET_PWD');
@@ -244,7 +244,7 @@
         SELECT document_id, extract_id
           INTO l_document_id,l_extract_id
         FROM vai_docai_document_extracts
-        WHERE ref_extract_id = p_extract_id;
+        WHERE docai_ref_extract_id = p_extract_id;
     $END
     docai_log_api.log(p_action            => ''
                          ,p_source_id         => l_document_id
@@ -1121,7 +1121,7 @@
    ,p_extract_template_id IN NUMBER       DEFAULT NULL
    ,p_extract_type        IN VARCHAR2     DEFAULT NULL
    ,p_response            IN CLOB         DEFAULT EMPTY_CLOB
-   ,p_ref_extract_id      IN NUMBER       DEFAULT NULL
+   ,p_docai_ref_extract_id      IN NUMBER       DEFAULT NULL
    ,p_streaming           IN BOOLEAN      DEFAULT FALSE
    ,p_submitted_ts        IN TIMESTAMP    DEFAULT NULL
    ,p_submitted_by        IN VARCHAR2     DEFAULT NULL
@@ -1224,8 +1224,8 @@
       $END
 
 
-      INSERT INTO vai_docai_document_extracts(tenant_id, document_id, system_prompt, prompt, llm_model, llm_temperature, response_format, status, name, callback_procedure, extract_template_id, extract_provider_id,extract_type, streaming_ind, submitted_ts, submitted_by,response,ref_extract_id)
-      VALUES(p_tenant_id, p_document_id, p_system_prompt, p_prompt, l_llm_model, l_llm_temperature, p_response_format, 'NEW', p_name,p_callback_procedure,p_extract_template_id, l_extract_provider_id,p_extract_type, l_streaming_ind, p_submitted_ts, p_submitted_by,p_response,p_ref_extract_id)
+      INSERT INTO vai_docai_document_extracts(tenant_id, document_id, system_prompt, prompt, llm_model, llm_temperature, response_format, status, name, callback_procedure, extract_template_id, extract_provider_id,extract_type, streaming_ind, submitted_ts, submitted_by,response,docai_ref_extract_id)
+      VALUES(p_tenant_id, p_document_id, p_system_prompt, p_prompt, l_llm_model, l_llm_temperature, p_response_format, 'NEW', p_name,p_callback_procedure,p_extract_template_id, l_extract_provider_id,p_extract_type, l_streaming_ind, p_submitted_ts, p_submitted_by,p_response,p_docai_ref_extract_id)
       RETURNING extract_id INTO l_extract_id;
 
       IF NOT p_skip_enqueue THEN
@@ -1284,7 +1284,7 @@
           );
 
           UPDATE vai_docai_document_extracts
-          SET ref_extract_id = l_docai_extract_id
+          SET docai_ref_extract_id = l_docai_extract_id
           WHERE extract_id = l_extract_id;
         $ELSE
           docai_engine_api.enqueue_extract(
@@ -1321,7 +1321,7 @@
    ,p_extract_template_id IN NUMBER         DEFAULT NULL
    ,p_extract_type        IN VARCHAR2       DEFAULT NULL
    ,p_response            IN CLOB           DEFAULT EMPTY_CLOB
-   ,p_ref_extract_id      IN NUMBER         DEFAULT NULL
+   ,p_docai_ref_extract_id      IN NUMBER         DEFAULT NULL
    ,p_streaming           IN BOOLEAN        DEFAULT FALSE
    ,p_submitted_ts        IN TIMESTAMP      DEFAULT NULL
    ,p_submitted_by        IN VARCHAR2       DEFAULT NULL
@@ -1348,7 +1348,7 @@
                      ,p_extract_template_id  => p_extract_template_id
                      ,p_extract_type         => p_extract_type
                      ,p_response             => p_response
-                     ,p_ref_extract_id       => p_ref_extract_id
+                     ,p_docai_ref_extract_id       => p_docai_ref_extract_id
                      ,p_streaming            => p_streaming
                      ,p_submitted_ts         => p_submitted_ts
                      ,p_submitted_by         => p_submitted_by
@@ -1435,7 +1435,7 @@
     l_res_extract_c         CLOB;
     l_status                VARCHAR2(1000);
     l_docai_ref_document_id NUMBER;
-    l_ref_extract_id        NUMBER;
+    l_docai_ref_extract_id        NUMBER;
     l_document_id           NUMBER;
     l_extract_id            NUMBER;
     l_tenant_id             NUMBER;
@@ -1444,7 +1444,7 @@
     l_res := JSON_OBJECT_T.parse(p_content_body);
     IF l_res.get_string('notification_type') = 'DOCAI_DOCUMENT_EXTRACT_COMPLETED' THEN
 
-        l_ref_extract_id := l_res.get_object('payload').get_number('extract_id');
+        l_docai_ref_extract_id := l_res.get_object('payload').get_number('extract_id');
         l_docai_ref_document_id := l_res.get_object('payload').get_object('document').get_number('document_id');
         BEGIN
             SELECT document_id,tenant_id into l_document_id,l_tenant_id
@@ -1458,7 +1458,7 @@
         BEGIN
             SELECT extract_id into l_extract_id
             FROM vai_docai_document_extracts
-            WHERE ref_extract_id = l_ref_extract_id;
+            WHERE docai_ref_extract_id = l_docai_ref_extract_id;
 
             EXCEPTION
                 WHEN NO_DATA_FOUND THEN
@@ -1475,14 +1475,14 @@
                    ,p_name                => 'General Classification'
                    ,p_extract_type        => 'GENERAL_CLASSIFICATION'
                    ,p_response            => l_res_extract.to_Clob
-                   ,p_ref_extract_id      => l_ref_extract_id
+                   ,p_docai_ref_extract_id      => l_docai_ref_extract_id
                    ,p_skip_enqueue        => TRUE);
 
                 l_status := l_res.get_object('payload').get_string('status');
 
                 UPDATE vai_docai_document_extracts
                 SET status = l_status
-                WHERE ref_extract_id = l_ref_extract_id;
+                WHERE docai_ref_extract_id = l_docai_ref_extract_id;
 
                 UPDATE vai_docai_documents
                    SET categorization_extract_id = l_extract_id
@@ -1509,7 +1509,7 @@
             UPDATE vai_docai_document_extracts
             SET response = l_res_extract_c
                 ,status = l_status
-            WHERE ref_extract_id = l_ref_extract_id;
+            WHERE docai_ref_extract_id = l_docai_ref_extract_id;
 
             l_wss_data := json_object_t();
 

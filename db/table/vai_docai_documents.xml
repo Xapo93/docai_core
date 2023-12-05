@@ -479,4 +479,22 @@ ALTER TRIGGER vai_docai_documents_bu ENABLE
 /
       </sql>
 	</changeSet>
+   <changeSet id="table-vai_docai_documents-10" author="VAI" failOnError="true" runOnChange="true">
+      <preConditions  onFail="MARK_RAN">
+			<sqlCheck  expectedResult="0">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENTS' AND column_name = 'CATEGORY_OPTIONS';</sqlCheck>
+		</preConditions>
+      <sql endDelimiter="\n/" splitStatements="true" stripComments="true">
+      ALTER TABLE VAI_DOCAI_DOCUMENTS ADD CATEGORY_OPTIONS CLOB
+/
+      </sql>
+	</changeSet>
+   <changeSet id="table-vai_docai_documents-11" author="VAI" failOnError="true" runOnChange="true">
+      <preConditions  onFail="MARK_RAN">
+			<sqlCheck  expectedResult="0">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENTS' AND column_name = 'DOCAI_REF_DOCUMENT_ID';</sqlCheck>
+		</preConditions>
+      <sql endDelimiter="\n/" splitStatements="true" stripComments="true">
+      ALTER TABLE VAI_DOCAI_DOCUMENTS ADD DOCAI_REF_DOCUMENT_ID NUMBER
+/
+      </sql>
+	</changeSet>
 </databaseChangeLog>
