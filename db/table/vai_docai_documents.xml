@@ -5,7 +5,7 @@
 	xmlns:n0="http://www.oracle.com/xml/ns/dbchangelog-ext" 
 	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
 	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
-	<changeSet id="table-vai_docai_documents" author="VAI" failOnError="true" runOnChange="true"    >
+	<changeSet id="docai-table-vai_docai_documents" author="VAI" failOnError="true" runOnChange="true"    >
 		<preConditions  onFail="MARK_RAN">
 			<sqlCheck  expectedResult="0">select count(*) from user_tables where table_name = upper('vai_docai_documents');</sqlCheck>
 		</preConditions>
@@ -341,7 +341,7 @@
 </TABLE>]]></n0:source>
 		</n0:createSxmlObject>
 </changeSet>
-   <changeSet id="table-vai_docai_documents-1" author="VAI" failOnError="true" runOnChange="true">
+   <changeSet id="docai-table-vai_docai_documents-1" author="VAI" failOnError="true" runOnChange="true">
       <preConditions  onFail="MARK_RAN">
 			<sqlCheck  expectedResult="0">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENTS' AND column_name = 'STATUS_ADDITIONAL_INFO' AND data_length = '4000';</sqlCheck>
 		</preConditions>
@@ -350,7 +350,7 @@
 /
       </sql>
    </changeSet>
-   <changeSet id="table-vai_docai_documents-2" author="VAI" failOnError="true" runOnChange="true">
+   <changeSet id="docai-table-vai_docai_documents-2" author="VAI" failOnError="true" runOnChange="true">
       <preConditions  onFail="MARK_RAN">
 			<sqlCheck  expectedResult="0">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENTS' AND column_name = 'CATEGORY_ID';</sqlCheck>
 		</preConditions>
@@ -359,7 +359,7 @@
 /
       </sql>
    </changeSet>
-   <changeSet id="table-vai_docai_documents-3" author="VAI" failOnError="true" runOnChange="true">
+   <changeSet id="docai-table-vai_docai_documents-3" author="VAI" failOnError="true" runOnChange="true">
       <preConditions  onFail="MARK_RAN">
 			<sqlCheck  expectedResult="0">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENTS' AND column_name = 'REFERENCE_SERVICE_KEY';</sqlCheck>
 		</preConditions>
@@ -368,7 +368,7 @@
 /
       </sql>
    </changeSet>
-   <changeSet id="table-vai_docai_documents-4" author="VAI" failOnError="true" runOnChange="true">
+   <changeSet id="docai-table-vai_docai_documents-4" author="VAI" failOnError="true" runOnChange="true">
       <preConditions  onFail="MARK_RAN">
 			<sqlCheck  expectedResult="0">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENTS' AND column_name = 'TITLE';</sqlCheck>
 		</preConditions>
@@ -377,7 +377,7 @@
 /
       </sql>
    </changeSet>
-   <changeSet id="table-vai_docai_documents-5" author="VAI" failOnError="true" runOnChange="true">
+   <changeSet id="docai-table-vai_docai_documents-5" author="VAI" failOnError="true" runOnChange="true">
       <preConditions  onFail="MARK_RAN">
 			<sqlCheck  expectedResult="0">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENTS' AND column_name = 'SUMMARY';</sqlCheck>
 		</preConditions>
@@ -387,7 +387,7 @@
       </sql>
    </changeSet>
 
-   <changeSet id="table-vai_docai_documents-audit-cols-tz-1" author="VAI" failOnError="true" runOnChange="true">
+   <changeSet id="docai-table-vai_docai_documents-audit-cols-tz-1" author="VAI" failOnError="true" runOnChange="true">
       <preConditions  onFail="MARK_RAN">
 			<sqlCheck expectedResult="1">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENTS' AND column_name = 'CRT_TS' AND data_type != 'TIMESTAMP(6) WITH LOCAL TIME ZONE';</sqlCheck>
 		</preConditions>
@@ -416,7 +416,7 @@ ALTER TRIGGER vai_docai_documents_bu ENABLE
 /
       </sql>
    </changeSet>
-   <changeSet id="table-vai_docai_documents-audit-cols-tz-2" author="VAI" failOnError="true" runOnChange="true">
+   <changeSet id="docai-table-vai_docai_documents-audit-cols-tz-2" author="VAI" failOnError="true" runOnChange="true">
       <preConditions  onFail="MARK_RAN">
 			<sqlCheck expectedResult="1">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENTS' AND column_name = 'UPD_TS' AND data_type != 'TIMESTAMP(6) WITH LOCAL TIME ZONE';</sqlCheck>
 		</preConditions>
@@ -443,7 +443,7 @@ ALTER TRIGGER vai_docai_documents_bu ENABLE
 /
       </sql>
    </changeSet>
-   <changeSet id="table-vai_docai_documents-6" author="VAI" failOnError="true" runOnChange="true">
+   <changeSet id="docai-table-vai_docai_documents-6" author="VAI" failOnError="true" runOnChange="true">
       <preConditions  onFail="MARK_RAN">
 			<sqlCheck  expectedResult="0">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENTS' AND column_name = 'ORG_ID';</sqlCheck>
 		</preConditions>
@@ -452,7 +452,7 @@ ALTER TRIGGER vai_docai_documents_bu ENABLE
 /
       </sql>
    </changeSet>
-   <changeSet id="table-vai_docai_documents-7" author="VAI" failOnError="true" runOnChange="true">
+   <changeSet id="docai-table-vai_docai_documents-7" author="VAI" failOnError="true" runOnChange="true">
       <preConditions  onFail="MARK_RAN">
 			<sqlCheck  expectedResult="0">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENTS' AND column_name = 'LOCATION_ID';</sqlCheck>
 		</preConditions>
@@ -461,7 +461,7 @@ ALTER TRIGGER vai_docai_documents_bu ENABLE
 /
       </sql>
    </changeSet>
-   <changeSet id="table-vai_docai_documents-8" author="VAI" failOnError="true" runOnChange="true">
+   <changeSet id="docai-table-vai_docai_documents-8" author="VAI" failOnError="true" runOnChange="true">
       <preConditions  onFail="MARK_RAN">
 			<sqlCheck  expectedResult="0">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENTS' AND column_name = 'DEPARTMENT_ID';</sqlCheck>
 		</preConditions>
@@ -470,12 +470,30 @@ ALTER TRIGGER vai_docai_documents_bu ENABLE
 /
       </sql>
 	</changeSet>
-   <changeSet id="table-vai_docai_documents-9" author="VAI" failOnError="true" runOnChange="true">
+   <changeSet id="docai-table-vai_docai_documents-9" author="VAI" failOnError="true" runOnChange="true">
       <preConditions  onFail="MARK_RAN">
 			<sqlCheck  expectedResult="0">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENTS' AND column_name = 'CATEGORIZATION_EXTRACT_ID';</sqlCheck>
 		</preConditions>
       <sql endDelimiter="\n/" splitStatements="true" stripComments="true">
       ALTER TABLE VAI_DOCAI_DOCUMENTS ADD CATEGORIZATION_EXTRACT_ID NUMBER
+/
+      </sql>
+	</changeSet>
+   <changeSet id="docai-table-vai_docai_documents-10" author="VAI" failOnError="true" runOnChange="true">
+      <preConditions  onFail="MARK_RAN">
+			<sqlCheck  expectedResult="0">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENTS' AND column_name = 'CATEGORY_OPTIONS';</sqlCheck>
+		</preConditions>
+      <sql endDelimiter="\n/" splitStatements="true" stripComments="true">
+      ALTER TABLE VAI_DOCAI_DOCUMENTS ADD CATEGORY_OPTIONS CLOB
+/
+      </sql>
+	</changeSet>
+   <changeSet id="docai-table-vai_docai_documents-11" author="VAI" failOnError="true" runOnChange="true">
+      <preConditions  onFail="MARK_RAN">
+			<sqlCheck  expectedResult="0">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENTS' AND column_name = 'DOCAI_REF_DOCUMENT_ID';</sqlCheck>
+		</preConditions>
+      <sql endDelimiter="\n/" splitStatements="true" stripComments="true">
+      ALTER TABLE VAI_DOCAI_DOCUMENTS ADD DOCAI_REF_DOCUMENT_ID NUMBER
 /
       </sql>
 	</changeSet>

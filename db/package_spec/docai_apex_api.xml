@@ -5,7 +5,7 @@
 	xmlns:n0="http://www.oracle.com/xml/ns/dbchangelog-ext" 
 	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
 	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
-	<changeSet id="package_spec-docai_apex_api" author="VAI" runOnChange="true"   >
+	<changeSet id="docai-package_spec-docai_apex_api" author="VAI" runOnChange="true"   >
 		<n0:createOraclePackageSpec objectName="DOCAI_APEX_API" objectType="package_spec" ownerName="VAI"   >
 			<n0:source><![CDATA[CREATE OR REPLACE EDITIONABLE PACKAGE docai_apex_api AS
   

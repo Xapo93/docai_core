@@ -3,7 +3,7 @@
    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
    xmlns:n0="http://www.oracle.com/xml/ns/dbchangelog-ext" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
 	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
-   <changeSet id="table-docai_document_category" author="VAI" failOnError="true" runOnChange="true">
+   <changeSet id="docai-table-docai_document_category" author="VAI" failOnError="true" runOnChange="true">
       <preConditions onFail="MARK_RAN">
          <sqlCheck expectedResult="0">select count(*) from user_tables where table_name = upper('docai_document_category');</sqlCheck>
       </preConditions>
@@ -163,7 +163,7 @@
       </n0:createSxmlObject>
    </changeSet>
 
-   <changeSet id="table-docai_document_category-1" author="VAI" failOnError="true" runOnChange="true">
+   <changeSet id="docai-table-docai_document_category-1" author="VAI" failOnError="true" runOnChange="true">
       <preConditions onFail="MARK_RAN">
          <sqlCheck expectedResult="1">Select COUNT(*) from user_tab_cols where table_name = 'DOCAI_DOCUMENT_CATEGORY' AND COLUMN_NAME = 'ACTIVE';</sqlCheck>
       </preConditions>
@@ -173,7 +173,7 @@
       </sql>
    </changeSet>
 
-   <changeSet id="table-docai_document_category-2" author="VAI" failOnError="true" runOnChange="true">
+   <changeSet id="docai-table-docai_document_category-2" author="VAI" failOnError="true" runOnChange="true">
       <preConditions onFail="MARK_RAN">
          <sqlCheck expectedResult="0">Select COUNT(*) from user_tab_cols where table_name = 'DOCAI_DOCUMENT_CATEGORY' AND COLUMN_NAME = 'PARENT_CATEGORY_ID';</sqlCheck>
       </preConditions>
@@ -183,7 +183,7 @@
       </sql>
    </changeSet>
 
-   <changeSet id="table-docai_document_category-3" author="VAI" failOnError="true" runOnChange="true">
+   <changeSet id="docai-table-docai_document_category-3" author="VAI" failOnError="true" runOnChange="true">
       <preConditions onFail="MARK_RAN">
          <sqlCheck expectedResult="0">Select COUNT(*) from user_tab_cols where table_name = 'DOCAI_DOCUMENT_CATEGORY' AND COLUMN_NAME = 'CATEGORY_SCHEMA_ID';</sqlCheck>
       </preConditions>
@@ -193,7 +193,7 @@
       </sql>
    </changeSet>
 
-   <changeSet id="table-docai_document_category-4" author="VAI" failOnError="true" runOnChange="true">
+   <changeSet id="docai-table-docai_document_category-4" author="VAI" failOnError="true" runOnChange="true">
       <preConditions onFail="MARK_RAN">
          <sqlCheck expectedResult="0">Select COUNT(*) from user_tab_cols where table_name = 'DOCAI_DOCUMENT_CATEGORY' AND COLUMN_NAME = 'DELETED_IND';</sqlCheck>
       </preConditions>
@@ -203,7 +203,7 @@
       </sql>
    </changeSet>
 
-   <changeSet id="table-docai_document_category-5" author="VAI" failOnError="true" runOnChange="true">
+   <changeSet id="docai-table-docai_document_category-5" author="VAI" failOnError="true" runOnChange="true">
       <preConditions onFail="MARK_RAN">
          <sqlCheck expectedResult="0">Select COUNT(*) from user_tab_cols where table_name = 'DOCAI_DOCUMENT_CATEGORY' AND COLUMN_NAME = 'SEQ';</sqlCheck>
       </preConditions>
