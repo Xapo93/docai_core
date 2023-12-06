@@ -332,12 +332,12 @@
         'p_extract_template_id', p_extract_template_id
       );
 
-      /*l_extract_id := docai_api.register_extract_from_template(
+      l_extract_id := docai_api.register_extract_from_template(
                         p_template_id   => p_extract_template_id
                        ,p_document_id   => p_document_id
                        ,p_tenant_id     => p_tenant_id
                        ,p_streaming     => CASE p_streaming_ind WHEN 'Y' THEN TRUE ELSE FALSE END
-                      );*/
+                      );
 
       RETURN l_extract_id;
     END post_extract;
