@@ -245,6 +245,9 @@
           INTO l_document_id,l_extract_id
         FROM vai_docai_document_extracts
         WHERE docai_ref_extract_id = p_extract_id;
+    $ELSE
+        l_document_id := p_document_id;
+        l_extract_id := p_extract_id;
     $END
     docai_log_api.log(p_action            => ''
                          ,p_source_id         => l_document_id
@@ -938,7 +941,7 @@
                               ,p_org_id        IN NUMBER DEFAULT NULL
                               ,p_location_id   IN NUMBER DEFAULT NULL
                               ,p_department_id IN NUMBER DEFAULT NULL
-                              ,p_categories    IN CLOB DEFAULT EMPTY_CLOB
+                              ,p_categories    IN CLOB DEFAULT NULL
                               ,p_tags          IN apex_application_global.vc_arr2 DEFAULT apex_application_global.c_empty_vc_arr2
                               ,p_services      IN apex_application_global.n_arr DEFAULT apex_application_global.c_empty_n_arr
                               ,p_batch_id      IN OUT VARCHAR2
@@ -986,7 +989,7 @@
                               ,p_org_id        IN NUMBER DEFAULT NULL
                               ,p_location_id   IN NUMBER DEFAULT NULL
                               ,p_department_id IN NUMBER DEFAULT NULL
-                              ,p_categories    IN CLOB DEFAULT EMPTY_CLOB
+                              ,p_categories    IN CLOB DEFAULT NULL
                               ,p_tags          IN apex_application_global.vc_arr2 DEFAULT apex_application_global.c_empty_vc_arr2
                               ,p_services      IN apex_application_global.n_arr DEFAULT apex_application_global.c_empty_n_arr
                               ,p_batch_id      IN OUT VARCHAR2
@@ -1046,7 +1049,7 @@
    ,p_org_id        IN NUMBER DEFAULT NULL
    ,p_location_id   IN NUMBER DEFAULT NULL
    ,p_department_id IN NUMBER DEFAULT NULL
-   ,p_categories    IN CLOB DEFAULT EMPTY_CLOB
+   ,p_categories    IN CLOB DEFAULT NULL
    ,p_tags          IN apex_application_global.vc_arr2 DEFAULT apex_application_global.c_empty_vc_arr2
    ,p_services      IN apex_application_global.n_arr DEFAULT apex_application_global.c_empty_n_arr
    ,p_batch_id      IN OUT VARCHAR2
