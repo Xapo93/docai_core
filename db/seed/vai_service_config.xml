@@ -1,0 +1,74 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.6.xsd">
+   
+    <changeSet author="VAI" id="docai-vai_service_config-1" failOnError="true" runOnChange="true">
+		<preConditions onFail="MARK_RAN">
+			<sqlCheck expectedResult="0">
+            SELECT COUNT(*) 
+              FROM vai_service_config 
+             WHERE 1=1 
+               AND name='DOCAI.EXTRACT.DEFAULT.PROVIDER_KEY' 
+               AND service_id = vai_service_api.get_service_id('VAI_DOC_AI') </sqlCheck>
+		</preConditions>
+		<insert tableName="VAI_SERVICE_CONFIG">
+            <column name="TENANT_ID" />
+            <column name="NAME" value="DOCAI.EXTRACT.DEFAULT.PROVIDER_KEY" />
+            <column name="VALUE"/>
+            <column name="CONTEXT" />
+            <column name="SERVICE_ID" valueComputed="vai_service_api.get_service_id('VAI_DOC_AI')" />
+        </insert>
+    </changeSet>
+    <changeSet author="VAI" id="docai-vai_service_config-2" failOnError="true" runOnChange="true">
+		<preConditions onFail="MARK_RAN">
+			<sqlCheck expectedResult="0">
+            SELECT COUNT(*) 
+              FROM vai_service_config 
+             WHERE 1=1 
+               AND name='DOCAI.EXTRACT.DEFAULT.LLM_MODEL' 
+               AND service_id = vai_service_api.get_service_id('VAI_DOC_AI') </sqlCheck>
+		</preConditions>
+		<insert tableName="VAI_SERVICE_CONFIG">
+            <column name="TENANT_ID" />
+            <column name="NAME" value="DOCAI.EXTRACT.DEFAULT.LLM_MODEL" />
+            <column name="VALUE"/>
+            <column name="CONTEXT" />
+            <column name="SERVICE_ID" valueComputed="vai_service_api.get_service_id('VAI_DOC_AI')" />
+        </insert>
+    </changeSet>
+    <changeSet author="VAI" id="docai-vai_service_config-3" failOnError="true" runOnChange="true">
+		<preConditions onFail="MARK_RAN">
+			<sqlCheck expectedResult="0">
+            SELECT COUNT(*) 
+              FROM vai_service_config 
+             WHERE 1=1 
+               AND name='DOCAI.EXTRACT.DEFAULT.LLM_MODEL_TEMPERATURE' 
+               AND service_id = vai_service_api.get_service_id('VAI_DOC_AI') </sqlCheck>
+		</preConditions>
+		<insert tableName="VAI_SERVICE_CONFIG">
+            <column name="TENANT_ID" />
+            <column name="NAME" value="DOCAI.EXTRACT.DEFAULT.LLM_MODEL_TEMPERATURE" />
+            <column name="VALUE"/>
+            <column name="CONTEXT" />
+            <column name="SERVICE_ID" valueComputed="vai_service_api.get_service_id('VAI_DOC_AI')" />
+        </insert>
+    </changeSet>
+    <changeSet author="VAI" id="docai-vai_service_config-4" failOnError="true" runOnChange="true">
+		<preConditions onFail="MARK_RAN">
+			<sqlCheck expectedResult="0">
+            SELECT COUNT(*) 
+              FROM vai_service_config 
+             WHERE 1=1 
+               AND name='DOCAI.EXTRACT.DEFAULT.SYSTEM_PROMPT' 
+               AND service_id = vai_service_api.get_service_id('VAI_DOC_AI') </sqlCheck>
+		</preConditions>
+		<insert tableName="VAI_SERVICE_CONFIG">
+            <column name="TENANT_ID" />
+            <column name="NAME" value="DOCAI.EXTRACT.DEFAULT.SYSTEM_PROMPT" />
+            <column name="VALUE"/>
+            <column name="CONTEXT" />
+            <column name="SERVICE_ID" valueComputed="vai_service_api.get_service_id('VAI_DOC_AI')" />
+        </insert>
+    </changeSet>
+</databaseChangeLog>
