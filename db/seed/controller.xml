@@ -5,5 +5,6 @@
 
 
   <include relativeToChangelogFile="true" file="docai_document_category.xml" />
+  <include relativeToChangelogFile="true" file="vai_service_config.xml" />
 </databaseChangeLog> 
 
