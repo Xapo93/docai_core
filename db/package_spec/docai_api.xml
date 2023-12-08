@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog 
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns:n0="http://www.oracle.com/xml/ns/dbchangelog-ext" 
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
+	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
+	<changeSet id="docai-package_spec-docai_api" author="VAI" failOnError="true" runOnChange="true"    >
+		<n0:createOraclePackageSpec objectName="DOCAI_API" objectType="package_spec" ownerName="VAI"   >
+			<n0:source><![CDATA[CREATE OR REPLACE EDITIONABLE PACKAGE "DOCAI_API" AS
+  g_by_system CONSTANT VARCHAR2(128) := 'SYSTEM';
+  -------------------------------------------------------------------------------------------------------------------------------
+  -------------------------------------------------------------------------------------------------------------------------------
+  -- UTILITIES
+  -------------------------------------------------------------------------------------------------------------------------------
+  -------------------------------------------------------------------------------------------------------------------------------  
+  FUNCTION get_tenant_wss_room(p_tenant_id IN NUMBER)
+  RETURN VARCHAR2;
+
+  FUNCTION get_document_services (p_document_id IN NUMBER)
+  RETURN JSON_ARRAY_T;
+
+  PROCEDURE notify_wss(
+    p_room   IN VARCHAR2,
+    p_event  IN VARCHAR2,
+    p_data   IN json_object_t DEFAULT NULL
+  );
+
+  PROCEDURE call_webhook (
+    p_tenant_id     IN NUMBER
+   ,p_webhook_event IN VARCHAR
+   ,p_payload_j     IN JSON_OBJECT_T
+   ,p_ref_key       IN VARCHAR2
+   ,p_ref_id        IN NUMBER
+   ,p_services      IN JSON_ARRAY_T DEFAULT JSON_ARRAY_T()
+  );
+
+  PROCEDURE process_streaming_callback(p_tenant_id    IN NUMBER,
+                                       p_document_id  IN NUMBER,
+                                       p_extract_id   IN NUMBER,
+                                       p_event        IN VARCHAR2,
+                                       p_token        IN VARCHAR2,
+                                       p_content      IN CLOB DEFAULT empty_clob);
+
+  FUNCTION get_document_json_reply(
+    p_document_id    IN NUMBER
+   ,p_tenant_id      IN NUMBER
+  )RETURN JSON_OBJECT_T;
+
+  FUNCTION get_extract_json_reply(
+    p_extract_id     IN NUMBER
+   ,p_document_id    IN NUMBER
+   ,p_tenant_id      IN NUMBER
+  )RETURN JSON_OBJECT_T;
+
+  -------------------------------------------------------------------------------------------------------------------------------
+  -------------------------------------------------------------------------------------------------------------------------------
+  -- DOCUMENT MANAGEMENT
+  -------------------------------------------------------------------------------------------------------------------------------
+  -------------------------------------------------------------------------------------------------------------------------------  
+  PROCEDURE bg_process_documents(p_tenant_id  IN NUMBER,
+                                   p_batch_id   IN VARCHAR2);
+
+  PROCEDURE process_document_categorization(
+    p_tenant_id   IN NUMBER,
+    p_document_id IN NUMBER,
+    p_extract_id  IN NUMBER
+  );
+
+  PROCEDURE register_document(p_tenant_id     IN NUMBER
+                            ,p_filename      IN VARCHAR2
+                            ,p_content       IN CLOB
+                            ,p_mime_type     IN VARCHAR2
+                            ,p_org_id        IN NUMBER DEFAULT NULL
+                            ,p_location_id   IN NUMBER DEFAULT NULL
+                            ,p_department_id IN NUMBER DEFAULT NULL
+                            ,p_categories    IN CLOB DEFAULT NULL
+                            ,p_tags          IN apex_application_global.vc_arr2 DEFAULT apex_application_global.c_empty_vc_arr2
+                            ,p_services      IN apex_application_global.n_arr DEFAULT apex_application_global.c_empty_n_arr
+                            ,p_batch_id      IN OUT VARCHAR2
+                            ,p_document_id   OUT NUMBER);
+
+  PROCEDURE register_document(p_tenant_id     IN NUMBER
+                            ,p_filename      IN VARCHAR2
+                            ,p_content       IN BLOB
+                            ,p_mime_type     IN VARCHAR2
+                            ,p_org_id        IN NUMBER DEFAULT NULL
+                            ,p_location_id   IN NUMBER DEFAULT NULL
+                            ,p_department_id IN NUMBER DEFAULT NULL
+                            ,p_categories    IN CLOB DEFAULT NULL
+                            ,p_tags          IN apex_application_global.vc_arr2 DEFAULT apex_application_global.c_empty_vc_arr2
+                            ,p_services      IN apex_application_global.n_arr DEFAULT apex_application_global.c_empty_n_arr
+                            ,p_batch_id      IN OUT VARCHAR2
+                            ,p_document_id   OUT NUMBER);
+
+  FUNCTION process_document(p_tenant_id     IN NUMBER
+                              ,p_filename      IN VARCHAR2
+                              ,p_content       IN BLOB
+                              ,p_mime_type     IN VARCHAR2
+                              ,p_org_id        IN NUMBER DEFAULT NULL
+                              ,p_location_id   IN NUMBER DEFAULT NULL
+                              ,p_department_id IN NUMBER DEFAULT NULL
+                              ,p_categories    IN CLOB DEFAULT NULL
+                              ,p_tags          IN apex_application_global.vc_arr2 DEFAULT apex_application_global.c_empty_vc_arr2
+                              ,p_services      IN apex_application_global.n_arr DEFAULT apex_application_global.c_empty_n_arr
+                              ,p_batch_id      IN OUT VARCHAR2
+  )RETURN NUMBER;
+
+  PROCEDURE delete_document(p_tenant_id   IN NUMBER
+                          ,p_document_id IN NUMBER
+  );
+
+  -------------------------------------------------------------------------------------------------------------------------------
+  -------------------------------------------------------------------------------------------------------------------------------
+  -- EXTRACT MANAGEMENT
+  -------------------------------------------------------------------------------------------------------------------------------
+  -------------------------------------------------------------------------------------------------------------------------------   
+
+  FUNCTION register_extract(p_tenant_id           IN NUMBER
+                          ,p_document_id         IN NUMBER
+                          ,p_extract_provider_id IN NUMBER
+                          ,p_llm_model           IN VARCHAR2     DEFAULT NULL
+                          ,p_llm_temperature     IN VARCHAR2     DEFAULT NULL
+                          ,p_prompt              IN CLOB         DEFAULT EMPTY_CLOB
+                          ,p_system_prompt       IN VARCHAR2     DEFAULT NULL
+                          ,p_response_format     IN CLOB         DEFAULT EMPTY_CLOB
+                          ,p_name                IN VARCHAR2     DEFAULT NULL
+                          ,p_callback_procedure  IN VARCHAR2     DEFAULT NULL
+                          ,p_extract_template_id IN NUMBER       DEFAULT NULL
+                          ,p_extract_type        IN VARCHAR2     DEFAULT NULL
+                          ,p_response            IN CLOB         DEFAULT EMPTY_CLOB
+                          ,p_docai_ref_extract_id      IN NUMBER       DEFAULT NULL
+                          ,p_streaming           IN BOOLEAN      DEFAULT FALSE
+                          ,p_submitted_ts        IN TIMESTAMP    DEFAULT NULL
+                          ,p_submitted_by        IN VARCHAR2     DEFAULT NULL
+                          ,p_skip_enqueue        IN BOOLEAN      DEFAULT FALSE
+                          )RETURN NUMBER;
+
+  FUNCTION register_extract(p_tenant_id           IN NUMBER
+                          ,p_document_id         IN NUMBER
+                          ,p_extract_provider_id IN NUMBER
+                          ,p_llm_model           IN VARCHAR2       DEFAULT NULL
+                          ,p_llm_temperature     IN VARCHAR2       DEFAULT 0
+                          ,p_prompt              IN CLOB           DEFAULT EMPTY_CLOB
+                          ,p_system_prompt       IN VARCHAR2       DEFAULT NULL
+                          ,p_response_format     IN JSON_OBJECT_T  DEFAULT NULL
+                          ,p_name                IN VARCHAR2       DEFAULT NULL
+                          ,p_callback_procedure  IN VARCHAR2       DEFAULT NULL
+                          ,p_extract_template_id IN NUMBER         DEFAULT NULL
+                          ,p_extract_type        IN VARCHAR2       DEFAULT NULL
+                          ,p_response            IN CLOB           DEFAULT EMPTY_CLOB
+                          ,p_docai_ref_extract_id      IN NUMBER         DEFAULT NULL
+                          ,p_streaming           IN BOOLEAN        DEFAULT FALSE
+                          ,p_submitted_ts        IN TIMESTAMP      DEFAULT NULL
+                          ,p_submitted_by        IN VARCHAR2       DEFAULT NULL
+                          ,p_skip_enqueue        IN BOOLEAN        DEFAULT FALSE
+                          )RETURN NUMBER;
+
+  FUNCTION register_extract_from_template(p_template_id            IN NUMBER
+                                          ,p_document_id            IN NUMBER
+                                          ,p_tenant_id              IN NUMBER
+                                          ,p_callback_procedure     IN VARCHAR2  DEFAULT NULL
+                                          ,p_streaming              IN BOOLEAN   DEFAULT FALSE
+                                          ,p_substitution_key       IN apex_application_global.vc_arr2 DEFAULT apex_application_global.c_empty_vc_arr2
+                                          ,p_substitution_values    IN apex_application_global.vc_arr2 DEFAULT apex_application_global.c_empty_vc_arr2
+                                          ,p_submitted_ts           IN TIMESTAMP DEFAULT NULL
+                                          ,p_submitted_by           IN VARCHAR2  DEFAULT NULL
+                                          ,p_skip_enqueue           IN BOOLEAN   DEFAULT FALSE
+                                          ) RETURN NUMBER;
+
+  PROCEDURE register_extract_from_template(p_template_id            IN NUMBER
+                                          ,p_document_id            IN NUMBER
+                                          ,p_tenant_id              IN NUMBER
+                                          ,p_callback_procedure     IN VARCHAR2  DEFAULT NULL
+                                          ,p_streaming              IN BOOLEAN   DEFAULT FALSE
+                                          ,p_substitution_key       IN apex_application_global.vc_arr2 DEFAULT apex_application_global.c_empty_vc_arr2
+                                          ,p_substitution_values    IN apex_application_global.vc_arr2 DEFAULT apex_application_global.c_empty_vc_arr2
+                                          ,p_submitted_ts           IN TIMESTAMP DEFAULT NULL
+                                          ,p_submitted_by           IN VARCHAR2  DEFAULT NULL
+                                          ,p_skip_enqueue           IN BOOLEAN   DEFAULT FALSE
+                                          );
+
+  -------------------------------------------------------------------------------------------------------------------------------
+  -------------------------------------------------------------------------------------------------------------------------------
+  -- STANDALONE MANAGEMENT
+  -------------------------------------------------------------------------------------------------------------------------------
+  -------------------------------------------------------------------------------------------------------------------------------  
+
+  PROCEDURE process_webhook(p_content_body          IN CLOB);
+
+END DOCAI_API;]]></n0:source>
+		</n0:createOraclePackageSpec>
+	</changeSet>
+</databaseChangeLog>

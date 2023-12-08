@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:n0="http://www.oracle.com/xml/ns/dbchangelog-ext" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
+	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
+	<changeSet id="docai-trigger-docai_entity_log_bu_trg" author="VAI" failOnError="true" runOnChange="true">
+		<n0:createOracleTrigger objectName="DOCAI_ENTITY_LOG_BU_TRG" objectType="trigger" ownerName="VAI">
+			<n0:source><![CDATA[CREATE OR REPLACE EDITIONABLE TRIGGER "DOCAI_ENTITY_LOG_BU_TRG" 
+BEFORE UPDATE
+ON DOCAI_ENTITY_LOG
+FOR EACH ROW
+BEGIN
+  :new.upd_ts := SYSTIMESTAMP;
+  :new.upd_by := NVL(v('APP_USER'), USER);
+END;]]></n0:source>
+		</n0:createOracleTrigger>
+	</changeSet>
+</databaseChangeLog>

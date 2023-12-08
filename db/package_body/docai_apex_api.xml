@@ -1,0 +1,842 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog 
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns:n0="http://www.oracle.com/xml/ns/dbchangelog-ext" 
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
+	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
+	<changeSet id="docai-package_body-docai_apex_api" author="VAI" failOnError="true" runOnChange="true"    >
+		<n0:createOraclePackageBody objectName="DOCAI_APEX_API" objectType="package_body" ownerName="VAI"   >
+			<n0:source><![CDATA[CREATE OR REPLACE EDITIONABLE PACKAGE BODY "DOCAI_APEX_API" AS
+
+  FUNCTION get_status_desc(p_status     IN VARCHAR2)
+  RETURN VARCHAR2
+  IS
+    l_desc VARCHAR2(1000);
+  BEGIN
+    CASE p_status
+      WHEN 'NEW' THEN l_desc := 'Submitted';
+      WHEN 'IN_PROCESS' THEN l_desc := 'Processing';
+      WHEN 'IN_PROCESS_RETRY' THEN l_desc := 'Processing';
+      WHEN 'RETRY' THEN l_desc := 'Processing';
+      WHEN 'ERROR' THEN l_desc := 'Failed';
+      WHEN 'COMPLETED' THEN l_desc := 'Completed';
+      WHEN 'OCR_IN_PROCESS' THEN l_desc := 'Processing';
+      WHEN 'OCR_COMPLETED' THEN l_desc := 'Processing';
+      WHEN 'VECTORIZATION_IN_PROCESS' THEN l_desc := 'Processing';
+      WHEN 'VECTORIZATION_COMPLETED' THEN l_desc := 'Processing';
+      WHEN 'CATEGORIZATION_REGISTERED' THEN l_desc := 'Processing';  
+      WHEN 'CATEGORIZATION_STARTED' THEN l_desc := 'Processing';  
+      WHEN 'CATEGORIZATION_ERROR' THEN l_desc := 'Failed';
+      ELSE l_desc := p_status;
+    END CASE;
+
+    RETURN l_desc;
+  END get_status_desc;
+
+  FUNCTION get_status_step_desc(p_status    IN VARCHAR2)
+  RETURN VARCHAR2
+  IS
+    l_desc VARCHAR2(1000);
+  BEGIN
+    CASE p_status
+      WHEN 'NEW' THEN l_desc := NULL;
+      WHEN 'IN_PROCESS' THEN l_desc := NULL;
+      WHEN 'IN_PROCESS_RETRY' THEN l_desc := 'Alright moving along now :)';
+      WHEN 'RETRY' THEN l_desc := 'Taking longer than expected please hang tight';
+      WHEN 'ERROR' THEN l_desc := NULL;
+      WHEN 'COMPLETED' THEN l_desc := NULL;
+      WHEN 'OCR_IN_PROCESS' THEN l_desc := 'Text Recogniction';
+      WHEN 'OCR_COMPLETED' THEN l_desc := 'Text Recognition';
+      WHEN 'VECTORIZATION_IN_PROCESS' THEN l_desc := 'Indexing';
+      WHEN 'VECTORIZATION_COMPLETED' THEN l_desc := 'Indexing';
+      WHEN 'CATEGORIZATION_REGISTERED' THEN l_desc := 'Categorization';
+      WHEN 'CATEGORIZATION_STARTED' THEN l_desc := 'Categorization';  
+      WHEN 'CATEGORIZATION_ERROR' THEN l_desc := 'Categorization failed';
+      ELSE l_desc := p_status;
+    END CASE;
+
+    RETURN l_desc;
+  END get_status_step_desc;
+
+  PROCEDURE process_documents(p_documents_collection  IN VARCHAR2,
+                              p_batch_id              OUT VARCHAR2,
+                              p_tenant_id             IN NUMBER DEFAULT v('G_TENANT_ID')) 
+  IS
+    l_error       VARCHAR2(4000);
+    l_batch_id    VARCHAR2(128);
+    l_document_id NUMBER;
+    l_services    apex_application_global.n_arr;
+  BEGIN
+    apex_debug.enter('docai_apex_api.process_documents',
+                     'p_batch_id', p_batch_id,
+                     'p_tenant_id', p_tenant_id);
+    l_services(1) := nv('APP_SERVICE_ID');
+    FOR d IN (
+        SELECT n001    AS tenant_id,
+               c001    AS filename,
+               c002    AS mime_type,
+               blob001 AS content
+          FROM apex_collections
+         WHERE collection_name = p_documents_collection
+           AND n001 = p_tenant_id) 
+    LOOP
+      apex_debug.info('Registering document ''%s'' [''%s''] for Document AI processing',
+                      d.filename,
+                      d.mime_type);
+
+      docai_api.register_document(p_tenant_id => p_tenant_id
+                                  ,p_filename => d.filename
+                                  ,p_content => d.content
+                                  ,p_mime_type => d.mime_type
+                                  ,p_org_id        => nv('APP_ORG_ID')
+                                  ,p_location_id   => nv('APP_LOCATION_ID')
+                                  ,p_department_id => nv('APP_DEPARTMENT_ID')
+                                  ,p_services      => l_services
+                                  ,p_batch_id => l_batch_id
+                                  ,p_document_id => l_document_id);
+
+      apex_debug.info('Registered document ''%s'' [''%s''] for Document AI processing successfully with Document AI ID [''%s''] in batch [''%s'']',
+                      d.filename,
+                      d.mime_type,
+                      l_document_id,
+                      l_batch_id);
+    END LOOP;
+
+    apex_debug.info('Invoking Document AI processing for registered documents in batch [''%s'']',
+                    l_batch_id);
+
+    docai_api.bg_process_documents(
+      p_tenant_id   => p_tenant_id
+     ,p_batch_id   => l_batch_id
+    );
+
+  EXCEPTION 
+    WHEN OTHERS THEN
+      l_error := 'Unable to process document. '||SQLERRM;
+      apex_debug.error(l_error);
+      RAISE;
+  END process_documents;
+
+  FUNCTION post_extract(
+    p_document_id         IN NUMBER
+   ,p_prompt              IN CLOB
+   ,p_name                IN VARCHAR2
+   ,p_extract_provider_id IN NUMBER
+   ,p_llm_model           IN VARCHAR2
+   ,p_llm_temperature     IN NUMBER
+   ,p_response_format     IN CLOB       DEFAULT EMPTY_CLOB
+   ,p_system_prompt       IN VARCHAR2   DEFAULT NULL
+   ,p_streaming_ind       IN VARCHAR2   DEFAULT 'Y'
+   ,p_extract_type        IN VARCHAR2   DEFAULT NULL
+   ,p_tenant_id           IN NUMBER     DEFAULT V('G_TENANT_ID')
+  ) RETURN NUMBER IS
+    l_extract_id NUMBER;
+  BEGIN
+    apex_debug.enter(
+      'docai_apex_api.post_extract',
+      'p_document_id', p_document_id,
+      'p_extract_provider_id',p_extract_provider_id,
+      'p_llm_model', p_llm_model,
+      'p_llm_temperature',p_llm_temperature,
+      'p_system_prompt', p_system_prompt,
+      'p_name', p_name,
+      'p_extract_type', p_extract_type,
+      'p_streaming_ind', p_streaming_ind
+    );
+
+    l_extract_id := docai_api.register_extract(
+                      p_tenant_id           => p_tenant_id
+                     ,p_document_id         => p_document_id
+                     ,p_extract_provider_id => p_extract_provider_id
+                     ,p_llm_model           => p_llm_model
+                     ,p_llm_temperature     => p_llm_temperature
+                     ,p_prompt              => p_prompt
+                     ,p_system_prompt       => p_system_prompt
+                     ,p_response_format     => p_response_format
+                     ,p_name                => p_name
+                     ,p_extract_type        => p_extract_type
+                     ,p_streaming           => CASE p_streaming_ind WHEN 'Y' THEN TRUE ELSE FALSE END
+                    );
+
+    RETURN l_extract_id;
+  /*EXCEPTION
+    WHEN OTHERS THEN
+      RAISE_APPLICATION_ERROR(-20001, 'Unexpected error in extraction. ' || SQLERRM);*/
+  END post_extract;
+
+    PROCEDURE post_extract(
+      p_document_id         IN NUMBER
+     ,p_prompt              IN CLOB
+     ,p_name                IN VARCHAR2
+     ,p_extract_provider_id IN NUMBER
+     ,p_llm_model           IN VARCHAR2
+     ,p_llm_temperature     IN NUMBER
+     ,p_response_format     IN CLOB       DEFAULT EMPTY_CLOB
+     ,p_system_prompt       IN VARCHAR2   DEFAULT NULL
+     ,p_streaming_ind       IN VARCHAR2   DEFAULT 'Y'
+     ,p_extract_type        IN VARCHAR2   DEFAULT NULL
+     ,p_tenant_id           IN NUMBER     DEFAULT V('G_TENANT_ID')
+    ) IS
+      l_extract_id NUMBER;
+    BEGIN
+      l_extract_id := post_extract(
+                        p_document_id         => p_document_id
+                       ,p_prompt              => p_prompt
+                       ,p_name                => p_name
+                       ,p_extract_provider_id => p_extract_provider_id
+                       ,p_llm_model           => p_llm_model
+                       ,p_llm_temperature     => p_llm_temperature
+                       ,p_response_format     => p_response_format
+                       ,p_system_prompt       => p_system_prompt
+                       ,p_streaming_ind       => p_streaming_ind
+                       ,p_extract_type        => p_extract_type
+                       ,p_tenant_id           => p_tenant_id
+                      );
+    END post_extract;
+
+    FUNCTION post_extract(
+      p_document_id       IN NUMBER
+     ,p_prompt            IN CLOB
+     ,p_name              IN VARCHAR2   DEFAULT NULL
+     ,p_streaming_ind     IN VARCHAR2   DEFAULT 'Y'
+     ,p_tenant_id         IN NUMBER     DEFAULT V('G_TENANT_ID')
+    ) RETURN NUMBER IS
+      l_default_extract_key   VARCHAR2(4000);
+      l_default_llm_model     VARCHAR2(4000);
+      l_default_system_prompt VARCHAR2(4000);
+
+      l_extract_provider_id   NUMBER;
+      l_llm_model             VARCHAR2(256);
+      l_llm_model_temperature NUMBER;
+    BEGIN
+      l_default_extract_key := vai_service_config_api.get(
+                                        p_name          => 'DOCAI.EXTRACT.DEFAULT.PROVIDER_KEY'
+                                       ,p_service_name  => 'VAI_DOC_AI'
+                                     );
+      l_default_llm_model := vai_service_config_api.get(
+                                p_name          => 'DOCAI.EXTRACT.DEFAULT.LLM_MODEL'
+                               ,p_service_name  => 'VAI_DOC_AI'
+                             );                
+
+      l_llm_model_temperature := vai_service_config_api.get(
+                                    p_name          => 'DOCAI.EXTRACT.DEFAULT.LLM_MODEL_TEMPERATURE'
+                                   ,p_service_name  => 'VAI_DOC_AI'
+                                 );
+
+      l_default_system_prompt := vai_service_config_api.get(
+                                    p_name          => 'DOCAI.EXTRACT.DEFAULT.SYSTEM_PROMPT'
+                                   ,p_service_name  => 'VAI_DOC_AI'
+                                 );
+      BEGIN
+        $IF $$DOCAI_STANDALONE IS NOT NULL $THEN
+            NULL;
+        $ELSE
+            SELECT  extract_provider_id
+              INTO l_extract_provider_id
+              FROM docai_extract_providers
+             WHERE provider_key = l_default_extract_key;
+
+          EXCEPTION
+            WHEN NO_DATA_FOUND THEN
+              IF l_default_extract_key IS NOT NULL THEN
+                APEX_DEBUG.ERROR('Document AI Default Extract Provider configured is not a valid provider');
+              ELSE
+                APEX_DEBUG.ERROR('Document AI Default Extract Provider is not configured');
+              END IF;
+
+              RAISE_APPLICATION_ERROR(-20001, 'Insights are currently not available, please contact support');
+        $END
+      END;
+
+      BEGIN
+        $IF $$DOCAI_STANDALONE IS NOT NULL $THEN
+            NULL;
+        $ELSE
+            SELECT llm_model
+              INTO l_llm_model
+              FROM docai_extract_provider_llm_models
+             WHERE extract_provider_id = l_extract_provider_id
+               AND llm_model = l_default_llm_model;
+
+          EXCEPTION
+            WHEN NO_DATA_FOUND THEN
+              IF l_default_llm_model IS NOT NULL THEN
+                APEX_DEBUG.ERROR('Document AI Default LLM Model configured is not a valid Extract Provider''s LLM Model');
+              ELSE
+                APEX_DEBUG.ERROR('Document AI Default LLM Model is not configured');
+              END IF;
+
+              RAISE_APPLICATION_ERROR(-20001, 'Insights are currently not available, please contact support');
+        $END
+      END;
+
+      $IF $$DOCAI_STANDALONE IS NULL $THEN
+          IF l_llm_model_temperature IS NULL THEN
+            APEX_DEBUG.ERROR('Document AI Default LLM Model Temperature is not configured');
+            RAISE_APPLICATION_ERROR(-20001, 'Insights are currently not available, please contact support');
+          END IF;
+      $END
+
+      $IF $$DOCAI_STANDALONE IS NULL $THEN
+          IF l_default_system_prompt IS NULL THEN 
+            APEX_DEBUG.ERROR('Document AI Default LLM Model Temperature is not configured');
+            RAISE_APPLICATION_ERROR(-20001, 'Insights are currently not available, please contact support');
+          END IF;
+      $END
+
+      RETURN post_extract(
+                p_document_id         => p_document_id
+               ,p_extract_provider_id => l_extract_provider_id
+               ,p_llm_model           => l_llm_model
+               ,p_llm_temperature     => l_llm_model_temperature
+               ,p_prompt              => p_prompt
+               ,p_system_prompt       => l_default_system_prompt
+               ,p_response_format     => NULL
+               ,p_name                => p_name
+               ,p_streaming_ind       => p_streaming_ind
+               ,p_extract_type        => NULL
+               ,p_tenant_id           => p_tenant_id
+              );
+    END post_extract;
+
+    PROCEDURE post_extract(
+      p_document_id       IN NUMBER
+     ,p_prompt            IN CLOB
+     ,p_name              IN VARCHAR2   DEFAULT NULL
+     ,p_streaming_ind     IN VARCHAR2   DEFAULT 'Y'
+     ,p_tenant_id         IN NUMBER     DEFAULT V('G_TENANT_ID')
+    )IS
+      l_extract_id NUMBER;
+    BEGIN
+      l_extract_id := post_extract(
+                        p_document_id   => p_document_id
+                       ,p_prompt        => p_prompt
+                       ,p_name          => p_name
+                       ,p_streaming_ind => p_streaming_ind
+                       ,p_tenant_id     => p_tenant_id
+                      );
+    END post_extract;
+
+    FUNCTION post_extract(
+      p_document_id         IN NUMBER,
+      p_extract_template_id IN NUMBER,
+      p_streaming_ind       IN VARCHAR2   DEFAULT 'Y',
+      p_tenant_id           IN NUMBER     DEFAULT V('G_TENANT_ID')
+    ) RETURN NUMBER IS
+      l_extract_id NUMBER;
+    BEGIN
+      apex_debug.enter(
+        'docai_apex_api.post_extract',
+        'p_document_id', p_document_id,
+        'p_extract_template_id', p_extract_template_id
+      );
+
+      l_extract_id := docai_api.register_extract_from_template(
+                        p_template_id   => p_extract_template_id
+                       ,p_document_id   => p_document_id
+                       ,p_tenant_id     => p_tenant_id
+                       ,p_streaming     => CASE p_streaming_ind WHEN 'Y' THEN TRUE ELSE FALSE END
+                      );
+
+      RETURN l_extract_id;
+    END post_extract;
+
+    PROCEDURE post_extract(
+      p_document_id         IN NUMBER,
+      p_extract_template_id IN NUMBER,
+      p_streaming_ind       IN VARCHAR2   DEFAULT 'Y',
+      p_tenant_id           IN NUMBER     DEFAULT V('G_TENANT_ID')
+    ) IS
+      l_extract_id NUMBER;
+    BEGIN
+      l_extract_id := post_extract(
+                        p_document_id         => p_document_id,
+                        p_extract_template_id => p_extract_template_id,
+                        p_streaming_ind       => p_streaming_ind,
+                        p_tenant_id           => p_tenant_id
+                      );
+    END post_extract;
+
+    FUNCTION human_label(p_label IN VARCHAR2) 
+    RETURN VARCHAR2
+    IS
+      l_human_label VARCHAR2(200);
+    BEGIN
+      l_human_label := replace(p_label, '_', ' ');
+      l_human_label := initcap(l_human_label);
+
+      RETURN l_human_label;
+    END;
+
+
+    FUNCTION insert_doc_label(p_document_id     IN NUMBER,
+                              p_label           IN VARCHAR2,
+                              p_value           IN VARCHAR2,
+                              p_value_type      IN VARCHAR2,
+                              p_depth           IN NUMBER,
+                              p_parent_label_id IN NUMBER DEFAULT NULL,
+                              p_tenant_id       IN NUMBER DEFAULT v('G_TENANT_ID'))
+    RETURN NUMBER
+    IS
+      l_human_label varchar2(500) := human_label(p_label);
+      l_label_id  NUMBER;
+    BEGIN
+      INSERT INTO vai_docai_document_labels(document_id,tenant_id, "LABEL", human_label, "VALUE", value_type, depth, parent_label_id)
+      VALUES (p_document_id,p_tenant_id ,p_label,l_human_label ,p_value,p_value_type,p_depth, p_parent_label_id) 
+      RETURNING label_id INTO l_label_id;
+
+      RETURN l_label_id;
+    END insert_doc_label;
+
+    PROCEDURE parse_labels_extract(p_object         IN json_object_t,
+                                   p_document_id    IN NUMBER,
+                                   p_depth          IN NUMBER DEFAULT 0,
+                                   p_parent_label   IN NUMBER DEFAULT NULL,
+                                   p_tenant_id      IN NUMBER DEFAULT v('G_TENANT_ID'))
+    IS
+       v_object JSON_OBJECT_T;
+       v_element   JSON_ELEMENT_T;
+       v_array     JSON_ARRAY_T;
+       v_keys JSON_KEY_LIST;
+       v_key VARCHAR2(4000);
+       l_depth NUMBER := p_depth + 1;
+       v_label_id  number;
+
+       INVALID_JSON_TYPE EXCEPTION;
+
+       PRAGMA EXCEPTION_INIT(INVALID_JSON_TYPE, -40587);
+    BEGIN
+        v_keys := p_object.get_keys;
+        FOR i IN v_keys.FIRST..v_keys.LAST LOOP
+            v_key := v_keys(i);
+            IF p_object.get(v_key).is_object THEN
+                v_object := new JSON_OBJECT_T(p_object.get(v_key));
+                v_label_id := insert_doc_label (
+                    p_DOCUMENT_ID   => p_document_id,
+                    p_TENANT_ID     => p_tenant_id,
+                    p_LABEL         => v_key,
+                    P_VALUE         => v_object.to_string,
+                    P_VALUE_TYPE    => 'OBJECT',
+                    P_DEPTH         => l_depth,
+                    P_PARENT_LABEL_ID  => p_parent_label
+                );
+                parse_labels_extract(
+                    p_object => v_object,
+                    p_document_id => p_document_id,
+                    p_tenant_id => p_tenant_id,
+                    p_depth => l_depth,
+                    p_parent_label => v_label_id);
+            ELSIF p_object.get(v_key).is_array THEN
+                v_array  := NEW JSON_ARRAY_T(p_object.get(v_key));
+                FOR indx IN 0 .. v_array.get_size - 1 loop
+                    BEGIN
+                        v_object := new json_object_t (v_array.get (indx));
+                        parse_labels_extract(
+                            p_object => v_object,
+                            p_document_id => p_document_id,
+                            p_tenant_id => p_tenant_id,
+                            p_depth => l_depth,
+                            p_parent_label  => p_parent_label);
+                    EXCEPTION WHEN INVALID_JSON_TYPE THEN
+                        v_element := v_array.get (indx);
+                        v_label_id := insert_doc_label (
+                            p_DOCUMENT_ID   => p_document_id,
+                            p_TENANT_ID     => p_tenant_id,
+                            p_LABEL         => v_key,
+                            P_VALUE         => v_element.to_string,
+                            P_VALUE_TYPE    => 'SCALAR',
+                            P_DEPTH         => l_depth,
+                            P_PARENT_LABEL_ID  => p_parent_label
+                        );
+                    END;
+                end loop;
+            ELSIF p_object.get(v_key).is_scalar then
+                v_label_id := insert_doc_label (
+                            p_DOCUMENT_ID   => p_document_id,
+                            p_TENANT_ID     => p_tenant_id,
+                            p_LABEL         => v_key,
+                            P_VALUE         => p_object.get(v_key).to_string,
+                            P_VALUE_TYPE    => 'SCALAR',
+                            P_DEPTH         => l_depth,
+                            P_PARENT_LABEL_ID  => p_parent_label
+                        );
+
+                dbms_output.put_line(LPAD(v_key ||' : '||p_object.get(v_key).to_string, length(v_key ||' : '||p_object.get(v_key).to_string)+l_depth*2));
+            END IF;
+        END LOOP;
+    END parse_labels_extract;
+
+    PROCEDURE merge_search_labels(p_document_id   IN NUMBER)
+    IS
+    BEGIN
+        MERGE INTO VAI_DOCAI_SEARCH_labelS  si
+        USING (
+            SELECT DISTINCT TENANT_ID, "LABEL", human_label
+            FROM VAI_DOCAI_DOCUMENT_LABELS
+            WHERE VALUE_TYPE = 'SCALAR'
+            AND document_id = p_document_id
+        ) di
+        ON (di.label = si.label AND di.tenant_id = si.tenant_id)
+        WHEN NOT MATCHED THEN
+            INSERT (
+                "TENANT_ID",
+                "LABEL",
+                "HUMAN_LABEL"
+            )
+            values(
+                di.tenant_id,
+                di.label,
+                di.human_label
+            );
+    END;
+
+  PROCEDURE on_extract_done(p_body IN CLOB)
+  IS
+    l_original_j    JSON_OBJECT_T := JSON_OBJECT_T(p_body);
+    l_response_j    JSON_OBJECT_T ;
+    l_document_id  NUMBER;
+    l_tenant_id     number;
+  BEGIN
+      l_document_id := json_object_t(l_original_j.get_object('document')).get_number('document_id');
+      l_response_j := json_object_t(l_original_j.get_object('extract')).get_object('response');
+
+      select tenant_id
+      into l_tenant_id
+      from vai_docai_documents
+      where document_id = l_document_id;
+
+      parse_labels_extract(
+          p_object => l_response_j,
+          p_document_id => l_document_id,
+          p_tenant_id => l_tenant_id
+      );
+
+      merge_search_labels(
+          p_document_id   => l_document_id
+      );
+  END;
+
+  FUNCTION get_docs_in_process_cnt(p_username   IN VARCHAR2 DEFAULT NULL,
+                                   p_batch_id   IN VARCHAR2 DEFAULT NULL,
+                                   p_tenant_id  IN NUMBER DEFAULT v('G_TENANT_ID'))
+  RETURN NUMBER
+  IS
+    l_pending_cnt     NUMBER;
+  BEGIN
+    SELECT count(*) AS cnt
+      INTO l_pending_cnt
+      FROM vai_docai_documents d
+     WHERE d.tenant_id = p_tenant_id
+       AND d.deleted_ind != 'Y'
+       AND d.status != 'COMPLETED' AND d.status != 'ERROR'
+       AND (d.crt_by = p_username OR p_username IS NULL )
+       AND (d.batch_id = p_batch_id OR p_batch_id IS NULL);
+
+    RETURN l_pending_cnt;
+
+  EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+      RETURN 0;
+  END get_docs_in_process_cnt;
+
+  PROCEDURE get_extracts_batch(p_username     IN VARCHAR2 DEFAULT NULL,
+                               p_batch_id     IN VARCHAR2 DEFAULT NULL,
+                               p_cnt          OUT NUMBER,
+                               p_pending_cnt  OUT NUMBER,
+                               p_error_cnt    OUT NUMBER,
+                               p_start_ts     OUT TIMESTAMP,
+                               p_last_upd_ts  OUT TIMESTAMP,
+                               p_tenant_id    IN NUMBER DEFAULT v('G_TENANT_ID'))
+  IS
+    l_cnt           NUMBER;
+    l_pending_cnt   NUMBER;
+    l_error_cnt     NUMBER;
+    l_start_crt_ts  TIMESTAMP;
+    l_last_upd_ts   TIMESTAMP;
+  BEGIN
+    SELECT 
+           MIN(d.upd_ts)
+                            AS start_crt_ts,
+           MAX(d.upd_ts)
+                            AS last_upd_ts,
+           COUNT(*)         AS cnt,
+           COUNT(DECODE(d.status, 'ERROR', NULL, 1))
+                            AS pending_cnt,
+           COUNT(DECODE(d.status, 'ERROR', 1, NULL))
+                            AS error_cnt
+      INTO l_start_crt_ts,
+           l_last_upd_ts,
+           l_cnt,
+           l_pending_cnt,
+           l_error_cnt
+      FROM vai_docai_documents d
+     WHERE d.tenant_id = p_tenant_id
+       AND d.deleted_ind != 'Y'
+       AND d.status != 'COMPLETED'
+       AND (
+            (p_batch_id IS NOT NULL AND d.batch_id = p_batch_id) OR
+            (p_batch_id IS NULL AND d.status != 'ERROR')
+            )
+       AND (d.crt_by = p_username OR p_username IS NULL);
+
+    p_cnt := l_cnt;
+    p_pending_cnt := l_pending_cnt;
+    p_error_cnt := l_error_cnt;
+    p_start_ts := l_start_crt_ts;
+    p_last_upd_ts := l_last_upd_ts;
+  END get_extracts_batch;
+
+  PROCEDURE get_docs_in_process_json(p_username   IN VARCHAR2 DEFAULT NULL,
+                                     p_batch_id   IN VARCHAR2 DEFAULT NULL,
+                                     p_tenant_id  IN NUMBER DEFAULT v('G_TENANT_ID'))
+  IS
+    l_cnt           NUMBER;
+    l_pending_cnt   NUMBER;
+    l_error_cnt     NUMBER;
+    l_start_crt_ts  TIMESTAMP WITH TIME ZONE;
+    l_last_upd_ts   TIMESTAMP WITH TIME ZONE;
+    l_pending_cnt_txt VARCHAR2(128);
+    l_error_cnt_txt   VARCHAR2(128);
+    l_start_crt_since VARCHAR2(128);
+    l_last_upd_since  VARCHAR2(128);
+  BEGIN
+    apex_json.open_array;
+
+    get_extracts_batch(p_tenant_id     => p_tenant_id,
+                       p_username      => p_username,
+                       p_batch_id      => p_batch_id,
+                       p_cnt           => l_cnt,
+                       p_pending_cnt   => l_pending_cnt,
+                       p_error_cnt     => l_error_cnt,
+                       p_start_ts      => l_start_crt_ts,
+                       p_last_upd_ts   => l_last_upd_ts);
+
+    l_pending_cnt_txt := TO_CHAR(l_pending_cnt,'999G999G999G999G999G999G990');
+    l_error_cnt_txt := TO_CHAR(l_error_cnt,'999G999G999G999G999G999G990');
+    l_start_crt_since := apex_util.get_since(l_start_crt_ts);
+    l_last_upd_since := apex_util.get_since(l_last_upd_ts);
+
+    apex_json.open_object;
+    apex_json.write('cnt', l_cnt);
+    apex_json.write('pending_cnt', l_pending_cnt);
+    apex_json.write('pending_cnt_txt', l_pending_cnt_txt);
+    apex_json.write('error_cnt', l_error_cnt);
+    apex_json.write('error_cnt_txt', l_error_cnt_txt);
+    apex_json.write('start_crt_ts', l_start_crt_ts);
+    apex_json.write('start_crt_since', l_start_crt_since);
+    apex_json.write('last_upd_ts', l_last_upd_ts);
+    apex_json.write('last_upd_since', l_last_upd_since);
+    apex_json.close_object;
+
+    apex_json.close_all;
+  END get_docs_in_process_json;
+
+  PROCEDURE delete_document(p_document_id IN NUMBER,
+                            p_tenant_id   IN NUMBER DEFAULT v('G_TENANT_ID'))
+  IS
+  BEGIN
+    apex_debug.enter('docai_apex_api.delete_document',
+                       'p_document_id', p_document_id,
+                       'p_tenant_id', p_tenant_id );
+
+    docai_api.delete_document(p_tenant_id   => p_tenant_id,
+                                  p_document_id => p_document_id);
+  END delete_document;
+
+  /*
+    i.e. APEX_APPLICATION.G_F01 array is of type APEX_APPLICATION_GLOBAL.VC_ARR2
+  */
+  PROCEDURE delete_documents_list(p_document_id_list IN APEX_APPLICATION_GLOBAL.VC_ARR2,
+                                  p_tenant_id        IN NUMBER DEFAULT v('G_TENANT_ID'))
+  IS
+  BEGIN
+    apex_debug.enter('docai_apex_api.delete_document',
+                     'p_document_id_list (Count)', p_document_id_list.COUNT,
+                     'p_tenant_id', p_tenant_id );
+
+    FOR i IN 1..p_document_id_list.COUNT
+    LOOP
+      delete_document(p_tenant_id   => p_tenant_id,
+                      p_document_id => p_document_id_list(i));
+    END LOOP;
+  END delete_documents_list;
+
+  PROCEDURE delete_extract(p_extract_id IN NUMBER,
+                           p_tenant_id  IN NUMBER  DEFAULT v('G_TENANT_ID'))
+  IS
+  BEGIN
+    apex_debug.enter('docai_apex_api.delete_extract',
+                     'p_extract_id', p_extract_id,
+                     'p_tenant_id', p_tenant_id );
+
+    UPDATE vai_docai_document_extracts
+       SET deleted_ind = 'Y'
+     WHERE tenant_id = p_tenant_id
+       AND extract_id = p_extract_id;
+  END delete_extract;
+
+  PROCEDURE register_view(p_document_id IN NUMBER,
+                          p_username    IN VARCHAR2  DEFAULT v('APP_USER'),
+                          p_view_ts     IN TIMESTAMP DEFAULT NULL,
+                          p_tenant_id   IN NUMBER DEFAULT v('G_TENANT_ID'))
+  IS
+  BEGIN
+    INSERT INTO docai_document_view_activity(username, document_id, view_ts, tenant_id)
+    VALUES (p_username, p_document_id, p_view_ts, p_tenant_id);
+  END register_view;       
+
+  PROCEDURE register_view(p_category_id IN NUMBER,
+                          p_username    IN VARCHAR2  DEFAULT v('APP_USER'),
+                          p_view_ts     IN TIMESTAMP DEFAULT NULL,
+                          p_tenant_id   IN NUMBER DEFAULT v('G_TENANT_ID'))
+  IS
+  BEGIN
+    FOR d IN (SELECT d.document_id
+                FROM vai_docai_documents d
+                LEFT JOIN docai_document_category dc ON dc.category_id = d.category_id
+                LEFT JOIN (SELECT category_id
+                             FROM docai_document_category
+                          CONNECT BY PRIOR category_id = parent_category_id
+                            START WITH category_id = p_category_id) ch ON ch.category_id = dc.category_id
+               WHERE d.tenant_id = p_tenant_id
+                 AND d.deleted_ind != 'Y'
+                 AND ch.category_id IS NOT NULL)
+    LOOP
+      register_view(p_document_id => d.document_id,
+                    p_username    => p_username,
+                    p_view_ts     => p_view_ts,
+                    p_tenant_id   => p_tenant_id);
+    END LOOP;
+
+  END register_view;          
+
+
+  FUNCTION get_menu_query
+  RETURN VARCHAR2
+  IS
+  BEGIN
+    RETURN q'~SELECT LEVEL AS lvl,
+       entry_text,
+       entry_target,
+       is_current,
+       entry_image,
+       entry_image_attributes
+FROM (SELECT e.list_entry_id * -1
+                                AS entry_id,
+             e.list_entry_parent_id * -1
+                                AS parent_entry_id,
+             e.display_sequence AS entry_display_sequence,
+             e.entry_text ||
+             DECODE(e.entry_text, 'Documents',
+               DECODE(
+                       (SELECT SUM(COUNT(DECODE(a.activity_id, NULL, DECODE(d.deleted_ind, 'N', 1, NULL ), NULL))) cnt
+                          FROM docai_document_category_hierarchy_v dc
+                          JOIN vai_docai_documents d ON d.category_id = dc.category_id AND d.tenant_id = :G_TENANT_ID
+                          LEFT JOIN docai_service_documents sd ON d.document_id = sd.document_id AND sd.service_id = nvl(:APP_SERVICE_ID,0)
+                          LEFT JOIN docai_document_view_activity a ON a.tenant_id = d.tenant_id AND a.document_id = d.document_id AND a.username = :APP_USER
+                         WHERE dc.active_ind = 'Y'
+                           AND (nvl(d.org_id,nvl(:APP_ORG_ID,0)) = nvl(:APP_ORG_ID,nvl(d.org_id,0)))
+                           AND (nvl(d.location_id,nvl(:APP_LOCATION_ID,0)) = nvl(:APP_LOCATION_ID,nvl(d.location_id,0)))
+                           AND (nvl(d.department_id,nvl(:APP_DEPARTMENT_ID,0)) = nvl(:APP_DEPARTMENT_ID,nvl(d.department_id,0)))
+                           AND nvl(:APP_SERVICE_ID,0) = nvl(sd.service_id,0)
+                         GROUP BY dc.parent_category_id,
+                                  dc.category_id,
+                                  dc.category_name,
+                                  dc.category_path),
+                      0, 
+                      NULL,
+                      NULL,
+                      NULL,
+                      '['||
+                      (SELECT SUM(COUNT(DECODE(a.activity_id, NULL, DECODE(d.deleted_ind, 'N', 1, NULL ), NULL))) cnt
+                          FROM docai_document_category_hierarchy_v dc
+                          JOIN vai_docai_documents d ON d.category_id = dc.category_id AND d.tenant_id = :G_TENANT_ID
+                          LEFT JOIN docai_service_documents sd ON d.document_id = sd.document_id AND sd.service_id = nvl(:APP_SERVICE_ID,0)
+                          LEFT JOIN docai_document_view_activity a ON a.tenant_id = d.tenant_id AND a.document_id = d.document_id AND a.username = :APP_USER
+                         WHERE dc.active_ind = 'Y'
+                           AND (nvl(d.org_id,nvl(:APP_ORG_ID,0)) = nvl(:APP_ORG_ID,nvl(d.org_id,0)))
+                           AND (nvl(d.location_id,nvl(:APP_LOCATION_ID,0)) = nvl(:APP_LOCATION_ID,nvl(d.location_id,0)))
+                           AND (nvl(d.department_id,nvl(:APP_DEPARTMENT_ID,0)) = nvl(:APP_DEPARTMENT_ID,nvl(d.department_id,0)))
+                           AND nvl(:APP_SERVICE_ID,0) = nvl(sd.service_id,0)
+                         GROUP BY dc.parent_category_id,
+                                  dc.category_id,
+                                  dc.category_name,
+                                  dc.category_path)
+                      ||' New]'
+               ), 
+             NULL)                         AS entry_text,
+             e.entry_target,
+             DECODE(:APP_DOC_VIEW_CATEGORY_ID, NULL,
+                CASE e.current_for_pages_type_code
+                  WHEN 'COLON_DELIMITED_PAGE_LIST' THEN DECODE(regexp_instr(:APP_ID, '['||e.current_for_pages_expression||']'), 0, 'N', 'Y')
+                  ELSE 'N'
+               END, 'N')                  AS is_current,
+             e.entry_image,
+             e.entry_image_attributes
+        FROM apex_application_lists l
+        JOIN apex_application_list_entries e ON e.list_id = l.list_id
+       WHERE l.application_id = :APP_ID
+         AND l.list_name = 'Navigation Menu'
+       UNION 
+      SELECT c.category_id
+                      AS entry_id,  
+             DECODE(parent_category_id, NULL, (SELECT e.list_entry_id * -1 FROM apex_application_lists l JOIN apex_application_list_entries e ON e.list_id = l.list_id WHERE l.application_id = :APP_ID AND l.list_name = 'Navigation Menu' AND e.entry_text = 'Documents'), parent_category_id)
+                      AS parent_entry_id,
+             c.seq_num  AS entry_display_sequence,
+             c.category_name || DECODE(c.unviewed_cnt, NULL, NULL, 0, NULL, '['||TO_CHAR(c.unviewed_cnt,'999G999G999')||' New]')
+                      AS entry_text,
+             APEX_PAGE.GET_URL(p_page     => 1,
+                               p_request  => 'VIEW',
+                               p_items    => 'APP_DOC_VIEW_CATEGORY_ID',
+                               p_values   => c.category_id)     
+                      AS entry_target,
+             CASE 
+              WHEN :APP_PAGE_ID in (1,100) THEN DECODE(:APP_DOC_VIEW_CATEGORY_ID, c.category_id, 'Y', 'N')
+              ELSE 'N'
+             END      AS is_current,
+             'fa-tag'   
+                      AS entry_image,
+             NULL     AS entry_image_attributes
+        FROM (SELECT h.category_id,
+                     h.category_name,
+                     h.category_path,
+                     h.parent_category_id,
+                     h.seq_num,
+                     h.active_ind,
+                     h.lvl,
+                     (SELECT SUM(NVL(cnt,0))
+                        FROM (SELECT COUNT(DECODE(a.activity_id, NULL, DECODE(d.deleted_ind, 'N', 1, NULL ), NULL)) cnt,
+                                     dc.parent_category_id,
+                                     dc.category_id,
+                                     dc.category_name,
+                                     dc.category_path
+                                FROM docai_document_category_hierarchy_v dc
+                                LEFT JOIN vai_docai_documents d ON d.category_id = dc.category_id AND d.tenant_id = :G_TENANT_ID
+                                LEFT JOIN docai_service_documents sd ON d.document_id = sd.document_id AND sd.service_id = nvl(:APP_SERVICE_ID,0)
+                                LEFT JOIN docai_document_view_activity a ON a.tenant_id = d.tenant_id AND a.document_id = d.document_id AND a.username = :APP_USER
+                               WHERE dc.active_ind = 'Y'                     
+                               AND (nvl(d.org_id,nvl(:APP_ORG_ID,0)) = nvl(:APP_ORG_ID,nvl(d.org_id,0)))
+                               AND (nvl(d.location_id,nvl(:APP_LOCATION_ID,0)) = nvl(:APP_LOCATION_ID,nvl(d.location_id,0)))
+                               AND (nvl(d.department_id,nvl(:APP_DEPARTMENT_ID,0)) = nvl(:APP_DEPARTMENT_ID,nvl(d.department_id,0)))
+                               AND nvl(:APP_SERVICE_ID,0) = nvl(sd.service_id,0)
+                               GROUP BY dc.parent_category_id,
+                                        dc.category_id,
+                                        dc.category_name,
+                                        dc.category_path) t
+                    CONNECT BY PRIOR t.category_id = t.parent_category_id
+                      START WITH t.category_id = h.category_id
+                     ) AS unviewed_cnt
+                FROM docai_document_category_hierarchy_v h
+               WHERE h.active_ind = 'Y') c
+       WHERE 1=1
+         AND lvl <= 2)
+ CONNECT BY PRIOR entry_id = parent_entry_id
+ START WITH parent_entry_id IS NULL
+ ORDER SIBLINGS BY entry_display_sequence ASC NULLS LAST, entry_text ASC~';
+  END;
+
+END docai_apex_api;]]></n0:source>
+		</n0:createOraclePackageBody>
+	</changeSet>
+</databaseChangeLog>

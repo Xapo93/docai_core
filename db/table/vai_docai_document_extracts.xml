@@ -1,0 +1,502 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog 
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns:n0="http://www.oracle.com/xml/ns/dbchangelog-ext" 
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
+	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
+	<changeSet id="docai-table-vai_docai_document_extracts" author="VAI" failOnError="true" runOnChange="true"    >
+		<preConditions  onFail="MARK_RAN">
+			<sqlCheck  expectedResult="0">select count(*) from user_tables where table_name = upper('vai_docai_document_extracts');</sqlCheck>
+		</preConditions>
+		<n0:createSxmlObject objectName="VAI_DOCAI_DOCUMENT_EXTRACTS" objectType="table" ownerName="VAI"   >
+			<n0:source><![CDATA[
+  <TABLE xmlns="http://xmlns.oracle.com/ku" version="1.0">
+   <NAME>VAI_DOCAI_DOCUMENT_EXTRACTS</NAME>
+   <RELATIONAL_TABLE>
+      <COL_LIST>
+         <COL_LIST_ITEM>
+            <NAME>EXTRACT_ID</NAME>
+            <DATATYPE>NUMBER</DATATYPE>
+            <IDENTITY_COLUMN>
+               <GENERATION>ALWAYS</GENERATION>
+               <INCREMENT>1</INCREMENT>
+               <MINVALUE>1</MINVALUE>
+               <MAXVALUE>9999999999999999999999999999</MAXVALUE>
+               <CACHE>20</CACHE>
+            </IDENTITY_COLUMN>
+            <NOT_NULL></NOT_NULL>
+         </COL_LIST_ITEM>
+         <COL_LIST_ITEM>
+            <NAME>DOCUMENT_ID</NAME>
+            <DATATYPE>NUMBER</DATATYPE>
+            <NOT_NULL></NOT_NULL>
+         </COL_LIST_ITEM>
+         <COL_LIST_ITEM>
+            <NAME>SYSTEM_PROMPT</NAME>
+            <DATATYPE>VARCHAR2</DATATYPE>
+            <LENGTH>4000</LENGTH>
+            <COLLATE_NAME>USING_NLS_COMP</COLLATE_NAME>
+         </COL_LIST_ITEM>
+         <COL_LIST_ITEM>
+            <NAME>LLM_MODEL</NAME>
+            <DATATYPE>VARCHAR2</DATATYPE>
+            <LENGTH>128</LENGTH>
+            <COLLATE_NAME>USING_NLS_COMP</COLLATE_NAME>
+         </COL_LIST_ITEM>
+         <COL_LIST_ITEM>
+            <NAME>LLM_TEMPERATURE</NAME>
+            <DATATYPE>NUMBER</DATATYPE>
+         </COL_LIST_ITEM>
+         <COL_LIST_ITEM>
+            <NAME>RESPONSE_FORMAT</NAME>
+            <DATATYPE>CLOB</DATATYPE>
+            <COLLATE_NAME>USING_NLS_COMP</COLLATE_NAME>
+         </COL_LIST_ITEM>
+         <COL_LIST_ITEM>
+            <NAME>REQUEST</NAME>
+            <DATATYPE>CLOB</DATATYPE>
+            <COLLATE_NAME>USING_NLS_COMP</COLLATE_NAME>
+         </COL_LIST_ITEM>
+         <COL_LIST_ITEM>
+            <NAME>RESPONSE</NAME>
+            <DATATYPE>CLOB</DATATYPE>
+            <COLLATE_NAME>USING_NLS_COMP</COLLATE_NAME>
+         </COL_LIST_ITEM>
+         <COL_LIST_ITEM>
+            <NAME>TENANT_ID</NAME>
+            <DATATYPE>NUMBER</DATATYPE>
+            <NOT_NULL></NOT_NULL>
+         </COL_LIST_ITEM>
+         <COL_LIST_ITEM>
+            <NAME>DELETED_IND</NAME>
+            <DATATYPE>VARCHAR2</DATATYPE>
+            <LENGTH>1</LENGTH>
+            <COLLATE_NAME>USING_NLS_COMP</COLLATE_NAME>
+            <DEFAULT>'N'</DEFAULT>
+            <NOT_NULL></NOT_NULL>
+         </COL_LIST_ITEM>
+         <COL_LIST_ITEM>
+            <NAME>CRT_TS</NAME>
+            <DATATYPE>TIMESTAMP</DATATYPE>
+            <SCALE>6</SCALE>
+            <NOT_NULL></NOT_NULL>
+         </COL_LIST_ITEM>
+         <COL_LIST_ITEM>
+            <NAME>CRT_BY</NAME>
+            <DATATYPE>VARCHAR2</DATATYPE>
+            <LENGTH>128</LENGTH>
+            <COLLATE_NAME>USING_NLS_COMP</COLLATE_NAME>
+            <NOT_NULL></NOT_NULL>
+         </COL_LIST_ITEM>
+         <COL_LIST_ITEM>
+            <NAME>UPD_TS</NAME>
+            <DATATYPE>TIMESTAMP</DATATYPE>
+            <SCALE>6</SCALE>
+         </COL_LIST_ITEM>
+         <COL_LIST_ITEM>
+            <NAME>UPD_BY</NAME>
+            <DATATYPE>VARCHAR2</DATATYPE>
+            <LENGTH>128</LENGTH>
+            <COLLATE_NAME>USING_NLS_COMP</COLLATE_NAME>
+         </COL_LIST_ITEM>
+         <COL_LIST_ITEM>
+            <NAME>RESPONSE_MIME_TYPE</NAME>
+            <DATATYPE>VARCHAR2</DATATYPE>
+            <LENGTH>128</LENGTH>
+            <COLLATE_NAME>USING_NLS_COMP</COLLATE_NAME>
+         </COL_LIST_ITEM>
+         <COL_LIST_ITEM>
+            <NAME>STATUS</NAME>
+            <DATATYPE>VARCHAR2</DATATYPE>
+            <LENGTH>128</LENGTH>
+            <COLLATE_NAME>USING_NLS_COMP</COLLATE_NAME>
+            <DEFAULT>'NEW'</DEFAULT>
+         </COL_LIST_ITEM>
+         <COL_LIST_ITEM>
+            <NAME>STATUS_ADDITIONAL_INFO</NAME>
+            <DATATYPE>VARCHAR2</DATATYPE>
+            <LENGTH>4000</LENGTH>
+            <COLLATE_NAME>USING_NLS_COMP</COLLATE_NAME>
+         </COL_LIST_ITEM>
+         <COL_LIST_ITEM>
+            <NAME>STATUS_STACKTRACE</NAME>
+            <DATATYPE>VARCHAR2</DATATYPE>
+            <LENGTH>4000</LENGTH>
+            <COLLATE_NAME>USING_NLS_COMP</COLLATE_NAME>
+         </COL_LIST_ITEM>
+         <COL_LIST_ITEM>
+            <NAME>NAME</NAME>
+            <DATATYPE>VARCHAR2</DATATYPE>
+            <LENGTH>100</LENGTH>
+            <COLLATE_NAME>USING_NLS_COMP</COLLATE_NAME>
+         </COL_LIST_ITEM>
+         <COL_LIST_ITEM>
+            <NAME>STREAMING_IND</NAME>
+            <DATATYPE>VARCHAR2</DATATYPE>
+            <LENGTH>1</LENGTH>
+            <COLLATE_NAME>USING_NLS_COMP</COLLATE_NAME>
+         </COL_LIST_ITEM>
+         <COL_LIST_ITEM>
+            <NAME>EXTRACT_TYPE</NAME>
+            <DATATYPE>VARCHAR2</DATATYPE>
+            <LENGTH>128</LENGTH>
+            <COLLATE_NAME>USING_NLS_COMP</COLLATE_NAME>
+         </COL_LIST_ITEM>
+         <COL_LIST_ITEM>
+            <NAME>CALLBACK_PROCEDURE</NAME>
+            <DATATYPE>VARCHAR2</DATATYPE>
+            <LENGTH>256</LENGTH>
+            <COLLATE_NAME>USING_NLS_COMP</COLLATE_NAME>
+         </COL_LIST_ITEM>
+         <COL_LIST_ITEM>
+            <NAME>EXTRACT_PROVIDER_ID</NAME>
+            <DATATYPE>NUMBER</DATATYPE>
+         </COL_LIST_ITEM>
+         <COL_LIST_ITEM>
+            <NAME>EXTRACT_TEMPLATE_ID</NAME>
+            <DATATYPE>NUMBER</DATATYPE>
+         </COL_LIST_ITEM>
+         <COL_LIST_ITEM>
+            <NAME>PROMPT</NAME>
+            <DATATYPE>CLOB</DATATYPE>
+            <COLLATE_NAME>USING_NLS_COMP</COLLATE_NAME>
+         </COL_LIST_ITEM>
+         <COL_LIST_ITEM>
+            <NAME>SUBMITTED_TS</NAME>
+            <DATATYPE>TIMESTAMP_WITH_LOCAL_TIMEZONE</DATATYPE>
+            <SCALE>6</SCALE>
+         </COL_LIST_ITEM>
+         <COL_LIST_ITEM>
+            <NAME>SUBMITTED_BY</NAME>
+            <DATATYPE>VARCHAR2</DATATYPE>
+            <LENGTH>128</LENGTH>
+            <COLLATE_NAME>USING_NLS_COMP</COLLATE_NAME>
+         </COL_LIST_ITEM>
+      </COL_LIST>
+      <PRIMARY_KEY_CONSTRAINT_LIST>
+         <PRIMARY_KEY_CONSTRAINT_LIST_ITEM>
+            <COL_LIST>
+               <COL_LIST_ITEM>
+                  <NAME>EXTRACT_ID</NAME>
+               </COL_LIST_ITEM>
+            </COL_LIST>
+            <USING_INDEX>
+               <INDEX_ATTRIBUTES>
+                  <PCTFREE>10</PCTFREE>
+                  <INITRANS>2</INITRANS>
+                  <MAXTRANS>255</MAXTRANS>
+                  <STORAGE>
+                     <INITIAL>65536</INITIAL>
+                     <NEXT>1048576</NEXT>
+                     <MINEXTENTS>1</MINEXTENTS>
+                     <MAXEXTENTS>2147483645</MAXEXTENTS>
+                     <PCTINCREASE>0</PCTINCREASE>
+                     <FREELISTS>1</FREELISTS>
+                     <FREELIST_GROUPS>1</FREELIST_GROUPS>
+                     <BUFFER_POOL>DEFAULT</BUFFER_POOL>
+                     <FLASH_CACHE>DEFAULT</FLASH_CACHE>
+                     <CELL_FLASH_CACHE>DEFAULT</CELL_FLASH_CACHE>
+                  </STORAGE>
+                  <LOGGING>Y</LOGGING>
+               </INDEX_ATTRIBUTES>
+            </USING_INDEX>
+         </PRIMARY_KEY_CONSTRAINT_LIST_ITEM>
+      </PRIMARY_KEY_CONSTRAINT_LIST>
+            <DEFAULT_COLLATION>USING_NLS_COMP</DEFAULT_COLLATION>
+      <PHYSICAL_PROPERTIES>
+         <HEAP_TABLE>
+            <SEGMENT_ATTRIBUTES>
+               <SEGMENT_CREATION_IMMEDIATE></SEGMENT_CREATION_IMMEDIATE>
+               <PCTFREE>10</PCTFREE>
+               <PCTUSED>40</PCTUSED>
+               <INITRANS>1</INITRANS>
+               <MAXTRANS>255</MAXTRANS>
+               <STORAGE>
+                  <INITIAL>65536</INITIAL>
+                  <NEXT>1048576</NEXT>
+                  <MINEXTENTS>1</MINEXTENTS>
+                  <MAXEXTENTS>2147483645</MAXEXTENTS>
+                  <PCTINCREASE>0</PCTINCREASE>
+                  <FREELISTS>1</FREELISTS>
+                  <FREELIST_GROUPS>1</FREELIST_GROUPS>
+                  <BUFFER_POOL>DEFAULT</BUFFER_POOL>
+                  <FLASH_CACHE>DEFAULT</FLASH_CACHE>
+                  <CELL_FLASH_CACHE>DEFAULT</CELL_FLASH_CACHE>
+               </STORAGE>
+               <LOGGING>Y</LOGGING>
+            </SEGMENT_ATTRIBUTES>
+            <COMPRESS>N</COMPRESS>
+         </HEAP_TABLE>
+      </PHYSICAL_PROPERTIES>
+      <TABLE_PROPERTIES>
+         <COLUMN_PROPERTIES>
+            <COL_LIST>
+               <COL_LIST_ITEM>
+                  <NAME>RESPONSE_FORMAT</NAME>
+                  <DATATYPE>CLOB</DATATYPE>
+                  <LOB_PROPERTIES>
+                     <STORAGE_TABLE>
+                        <SECUREFILE></SECUREFILE>
+                        <STORAGE_IN_ROW></STORAGE_IN_ROW>
+                        <STORAGE>
+                           <INITIAL>106496</INITIAL>
+                           <NEXT>1048576</NEXT>
+                           <MINEXTENTS>1</MINEXTENTS>
+                           <MAXEXTENTS>2147483645</MAXEXTENTS>
+                           <PCTINCREASE>0</PCTINCREASE>
+                           <BUFFER_POOL>DEFAULT</BUFFER_POOL>
+                           <FLASH_CACHE>DEFAULT</FLASH_CACHE>
+                           <CELL_FLASH_CACHE>DEFAULT</CELL_FLASH_CACHE>
+                        </STORAGE>
+                        <CHUNK>8192</CHUNK>
+                        <CACHE>N</CACHE>
+                        <LOGGING>Y</LOGGING>
+                        <VALIDATE>N</VALIDATE>
+                     </STORAGE_TABLE>
+                  </LOB_PROPERTIES>
+               </COL_LIST_ITEM>
+               <COL_LIST_ITEM>
+                  <NAME>REQUEST</NAME>
+                  <DATATYPE>CLOB</DATATYPE>
+                  <LOB_PROPERTIES>
+                     <STORAGE_TABLE>
+                        <SECUREFILE></SECUREFILE>
+                        <STORAGE_IN_ROW></STORAGE_IN_ROW>
+                        <STORAGE>
+                           <INITIAL>106496</INITIAL>
+                           <NEXT>1048576</NEXT>
+                           <MINEXTENTS>1</MINEXTENTS>
+                           <MAXEXTENTS>2147483645</MAXEXTENTS>
+                           <PCTINCREASE>0</PCTINCREASE>
+                           <BUFFER_POOL>DEFAULT</BUFFER_POOL>
+                           <FLASH_CACHE>DEFAULT</FLASH_CACHE>
+                           <CELL_FLASH_CACHE>DEFAULT</CELL_FLASH_CACHE>
+                        </STORAGE>
+                        <CHUNK>8192</CHUNK>
+                        <CACHE>N</CACHE>
+                        <LOGGING>Y</LOGGING>
+                        <VALIDATE>N</VALIDATE>
+                     </STORAGE_TABLE>
+                  </LOB_PROPERTIES>
+               </COL_LIST_ITEM>
+               <COL_LIST_ITEM>
+                  <NAME>RESPONSE</NAME>
+                  <DATATYPE>CLOB</DATATYPE>
+                  <LOB_PROPERTIES>
+                     <STORAGE_TABLE>
+                        <SECUREFILE></SECUREFILE>
+                        <STORAGE_IN_ROW></STORAGE_IN_ROW>
+                        <STORAGE>
+                           <INITIAL>106496</INITIAL>
+                           <NEXT>1048576</NEXT>
+                           <MINEXTENTS>1</MINEXTENTS>
+                           <MAXEXTENTS>2147483645</MAXEXTENTS>
+                           <PCTINCREASE>0</PCTINCREASE>
+                           <BUFFER_POOL>DEFAULT</BUFFER_POOL>
+                           <FLASH_CACHE>DEFAULT</FLASH_CACHE>
+                           <CELL_FLASH_CACHE>DEFAULT</CELL_FLASH_CACHE>
+                        </STORAGE>
+                        <CHUNK>8192</CHUNK>
+                        <CACHE>N</CACHE>
+                        <LOGGING>Y</LOGGING>
+                        <VALIDATE>N</VALIDATE>
+                     </STORAGE_TABLE>
+                  </LOB_PROPERTIES>
+               </COL_LIST_ITEM>
+               <COL_LIST_ITEM>
+                  <NAME>PROMPT</NAME>
+                  <DATATYPE>CLOB</DATATYPE>
+                  <LOB_PROPERTIES>
+                     <STORAGE_TABLE>
+                        <SECUREFILE></SECUREFILE>
+                        <STORAGE_IN_ROW></STORAGE_IN_ROW>
+                        <STORAGE>
+                           <INITIAL>106496</INITIAL>
+                           <NEXT>1048576</NEXT>
+                           <MINEXTENTS>1</MINEXTENTS>
+                           <MAXEXTENTS>2147483645</MAXEXTENTS>
+                           <PCTINCREASE>0</PCTINCREASE>
+                           <BUFFER_POOL>DEFAULT</BUFFER_POOL>
+                           <FLASH_CACHE>DEFAULT</FLASH_CACHE>
+                           <CELL_FLASH_CACHE>DEFAULT</CELL_FLASH_CACHE>
+                        </STORAGE>
+                        <CHUNK>8192</CHUNK>
+                        <CACHE>N</CACHE>
+                        <LOGGING>Y</LOGGING>
+                        <VALIDATE>N</VALIDATE>
+                     </STORAGE_TABLE>
+                  </LOB_PROPERTIES>
+               </COL_LIST_ITEM>
+            </COL_LIST>
+         </COLUMN_PROPERTIES>
+      </TABLE_PROPERTIES>
+   </RELATIONAL_TABLE>
+</TABLE>]]></n0:source>
+		</n0:createSxmlObject>
+</changeSet>
+<changeSet id="docai-table-vai_docai_document_extracts-1" author="VAI" failOnError="true" runOnChange="true">
+      <preConditions onFail="MARK_RAN">
+         <sqlCheck expectedResult="0">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENT_EXTRACTS' AND column_name = 'RESPONSE_MIME_TYPE';</sqlCheck>
+      </preConditions>
+      <sql endDelimiter="\n/" splitStatements="true" stripComments="true">
+      ALTER TABLE VAI_DOCAI_DOCUMENT_EXTRACTS ADD response_mime_type VARCHAR2(128)
+/
+      </sql>
+   </changeSet>
+   <changeSet id="docai-table-vai_docai_document_extracts-2" author="VAI" failOnError="true" runOnChange="true">
+      <preConditions onFail="MARK_RAN">
+         <sqlCheck expectedResult="0">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENT_EXTRACTS' AND column_name = 'STATUS';</sqlCheck>
+      </preConditions>
+      <sql endDelimiter="\n/" splitStatements="true" stripComments="true">
+      ALTER TABLE vai_docai_document_extracts ADD status VARCHAR2(128) DEFAULT 'NEW'
+/
+      </sql>
+   </changeSet>
+   <changeSet id="docai-table-vai_docai_document_extracts-3" author="VAI" failOnError="true" runOnChange="true">
+      <preConditions onFail="MARK_RAN">
+         <sqlCheck expectedResult="0">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENT_EXTRACTS' AND column_name = 'STATUS_ADDITIONAL_INFO';</sqlCheck>
+      </preConditions>
+      <sql endDelimiter="\n/" splitStatements="true" stripComments="true">
+         ALTER TABLE vai_docai_document_extracts ADD status_additional_info VARCHAR2(4000)
+/
+      </sql>
+   </changeSet>
+   <changeSet id="docai-table-vai_docai_document_extracts-4" author="VAI" failOnError="true" runOnChange="true">
+      <preConditions onFail="MARK_RAN">
+         <sqlCheck expectedResult="0">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENT_EXTRACTS' AND column_name = 'STATUS_STACKTRACE';</sqlCheck>
+      </preConditions>
+      <sql endDelimiter="\n/" splitStatements="true" stripComments="true">
+         ALTER TABLE vai_docai_document_extracts ADD status_stacktrace VARCHAR2(4000)
+/
+      </sql>
+   </changeSet>
+   <changeSet id="docai-table-vai_docai_document_extracts-5" author="VAI" failOnError="true" runOnChange="true">
+      <preConditions onFail="MARK_RAN">
+         <sqlCheck expectedResult="0">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENT_EXTRACTS' AND column_name = 'NAME';</sqlCheck>
+      </preConditions>
+      <sql endDelimiter="\n/" splitStatements="true" stripComments="true">
+         ALTER TABLE vai_docai_document_extracts ADD NAME VARCHAR2(100)
+/
+      </sql>
+   </changeSet>
+   <changeSet id="docai-table-vai_docai_document_extracts-6" author="VAI" failOnError="true" runOnChange="true">
+      <preConditions onFail="MARK_RAN">
+         <sqlCheck expectedResult="0">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENT_EXTRACTS' AND column_name = 'CALLBACK_PROCEDURE';</sqlCheck>
+      </preConditions>
+      <sql endDelimiter="\n/" splitStatements="true" stripComments="true">
+         ALTER TABLE vai_docai_document_extracts ADD CALLBACK_PROCEDURE VARCHAR2(256)
+/
+      </sql>
+   </changeSet>
+   <changeSet id="docai-table-vai_docai_document_extracts-7" author="VAI" failOnError="true" runOnChange="true">
+      <preConditions onFail="MARK_RAN">
+         <sqlCheck expectedResult="0">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENT_EXTRACTS' AND column_name = 'EXTRACT_PROVIDER_ID';</sqlCheck>
+      </preConditions>
+      <sql endDelimiter="\n/" splitStatements="true" stripComments="true">
+         ALTER TABLE vai_docai_document_extracts ADD EXTRACT_PROVIDER_ID NUMBER
+/
+      </sql>
+   </changeSet>
+   <changeSet id="docai-table-vai_docai_document_extracts-8" author="VAI" failOnError="true" runOnChange="true">
+      <preConditions onFail="MARK_RAN">
+         <sqlCheck expectedResult="0">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENT_EXTRACTS' AND column_name = 'STREAMING_IND';</sqlCheck>
+      </preConditions>
+      <sql endDelimiter="\n/" splitStatements="true" stripComments="true">
+         ALTER TABLE vai_docai_document_extracts ADD streaming_ind VARCHAR2(1)
+/
+      </sql>
+   </changeSet>
+   <changeSet id="docai-table-vai_docai_document_extracts-9" author="VAI" failOnError="true" runOnChange="true">
+      <preConditions onFail="MARK_RAN">
+         <sqlCheck expectedResult="0">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENT_EXTRACTS' AND column_name = 'EXTRACT_TYPE';</sqlCheck>
+      </preConditions>
+      <sql endDelimiter="\n/" splitStatements="true" stripComments="true">
+         ALTER TABLE vai_docai_document_extracts ADD extract_type VARCHAR2(128)
+/
+      </sql>
+   </changeSet>
+   <changeSet id="docai-table-vai_docai_document_extracts-10" author="VAI" failOnError="true" runOnChange="true">
+      <preConditions onFail="MARK_RAN">
+         <sqlCheck expectedResult="0">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENT_EXTRACTS' AND column_name = 'EXTRACT_TEMPLATE_ID';</sqlCheck>
+      </preConditions>
+      <sql endDelimiter="\n/" splitStatements="true" stripComments="true">
+         ALTER TABLE vai_docai_document_extracts ADD extract_template_id NUMBER
+/
+      </sql>
+   </changeSet>
+   <changeSet id="docai-table-vai_docai_document_extracts-11" author="VAI" failOnError="true" runOnChange="true">
+      <preConditions onFail="MARK_RAN">
+         <sqlCheck expectedResult="1">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENT_EXTRACTS' AND column_name = 'PROMPT' AND data_type = 'VARCHAR2';</sqlCheck>
+      </preConditions>
+      <sql endDelimiter="\n/" splitStatements="true" stripComments="true">
+         ALTER TABLE vai_docai_document_extracts ADD prompt_clob CLOB
+/
+      </sql>
+   </changeSet>
+   <changeSet id="docai-table-vai_docai_document_extracts-12" author="VAI" failOnError="true" runOnChange="true">
+      <preConditions onFail="MARK_RAN">
+         <sqlCheck expectedResult="1">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENT_EXTRACTS' AND column_name = 'PROMPT' AND data_type = 'VARCHAR2';</sqlCheck>
+      </preConditions>
+      <sql endDelimiter="\n/" splitStatements="true" stripComments="true">
+         ALTER TABLE vai_docai_document_extracts RENAME COLUMN prompt TO prompt_varchar
+/
+      </sql>
+   </changeSet>
+   <changeSet id="docai-table-vai_docai_document_extracts-13" author="VAI" failOnError="true" runOnChange="true">
+      <preConditions onFail="MARK_RAN">
+         <sqlCheck expectedResult="1">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENT_EXTRACTS' AND column_name = 'PROMPT_VARCHAR' AND data_type = 'VARCHAR2';</sqlCheck>
+      </preConditions>
+      <sql endDelimiter="\n/" splitStatements="true" stripComments="true">
+         UPDATE vai_docai_document_extracts
+            SET prompt_clob = prompt_varchar
+          WHERE 1=1
+/
+      </sql>
+   </changeSet>
+   <changeSet id="docai-table-vai_docai_document_extracts-14" author="VAI" failOnError="true" runOnChange="true">
+      <preConditions onFail="MARK_RAN">
+         <sqlCheck expectedResult="1">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENT_EXTRACTS' AND column_name = 'PROMPT_VARCHAR' AND data_type = 'VARCHAR2';</sqlCheck>
+      </preConditions>
+      <sql endDelimiter="\n/" splitStatements="true" stripComments="true">
+         ALTER TABLE vai_docai_document_extracts RENAME COLUMN prompt_clob TO prompt
+/
+      </sql>
+   </changeSet>
+      <changeSet id="docai-table-vai_docai_document_extracts-15" author="VAI" failOnError="true" runOnChange="true">
+      <preConditions onFail="MARK_RAN">
+         <sqlCheck expectedResult="1">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENT_EXTRACTS' AND column_name = 'PROMPT_VARCHAR' AND data_type = 'VARCHAR2';</sqlCheck>
+      </preConditions>
+      <sql endDelimiter="\n/" splitStatements="true" stripComments="true">
+         ALTER TABLE vai_docai_document_extracts DROP COLUMN prompt_varchar
+/
+      </sql>
+	</changeSet>
+   <changeSet id="docai-table-vai_docai_document_extracts-16" author="VAI" failOnError="true" runOnChange="true">
+      <preConditions onFail="MARK_RAN">
+         <sqlCheck expectedResult="0">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENT_EXTRACTS' AND column_name = 'SUBMITTED_TS';</sqlCheck>
+      </preConditions>
+      <sql endDelimiter="\n/" splitStatements="true" stripComments="true">
+         ALTER TABLE vai_docai_document_extracts ADD submitted_ts TIMESTAMP WITH LOCAL TIME ZONE
+/
+      </sql>
+   </changeSet>
+   <changeSet id="docai-table-vai_docai_document_extracts-17" author="VAI" failOnError="true" runOnChange="true">
+      <preConditions onFail="MARK_RAN">
+         <sqlCheck expectedResult="0">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENT_EXTRACTS' AND column_name = 'SUBMITTED_BY';</sqlCheck>
+      </preConditions>
+      <sql endDelimiter="\n/" splitStatements="true" stripComments="true">
+         ALTER TABLE vai_docai_document_extracts ADD submitted_by VARCHAR2(128)
+/
+      </sql>
+   </changeSet>
+   <changeSet id="docai-table-vai_docai_document_extracts-18" author="VAI" failOnError="true" runOnChange="true">
+      <preConditions onFail="MARK_RAN">
+         <sqlCheck expectedResult="0">SELECT COUNT(*) FROM user_tab_cols WHERE table_name = 'VAI_DOCAI_DOCUMENT_EXTRACTS' AND column_name = 'docai_ref_extract_id';</sqlCheck>
+      </preConditions>
+      <sql endDelimiter="\n/" splitStatements="true" stripComments="true">
+         ALTER TABLE vai_docai_document_extracts ADD docai_ref_extract_id VARCHAR2(128)
+/
+      </sql>
+   </changeSet>
+</databaseChangeLog>

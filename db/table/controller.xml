@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+  <include relativeToChangelogFile="true" file="vai_docai_documents.xml" />
+  <include relativeToChangelogFile="true" file="vai_docai_document_extracts.xml" />
+  <include relativeToChangelogFile="true" file="vai_docai_document_labels.xml" />
+  <include relativeToChangelogFile="true" file="vai_docai_search_labels.xml" />
+  <include relativeToChangelogFile="true" file="docai_document_category.xml" />
+  <include relativeToChangelogFile="true" file="docai_entity_log.xml" />
+  <include relativeToChangelogFile="true" file="docai_extract_labels.xml" />
+  <include relativeToChangelogFile="true" file="docai_document_tags.xml" />
+  <include relativeToChangelogFile="true" file="docai_service_documents.xml" />
+  <include relativeToChangelogFile="true" file="docai_document_view_activity.xml" />
+  <include relativeToChangelogFile="true" file="docai_document_category_schemas.xml" />
+</databaseChangeLog> 

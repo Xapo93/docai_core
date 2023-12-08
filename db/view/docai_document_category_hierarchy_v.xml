@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xmlns:n0="http://www.oracle.com/xml/ns/dbchangelog-ext" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
+	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
+   <changeSet id="docai-view-docai_document_category_hierarchy_v" author="VAI" failOnError="true" runOnChange="true">
+      <sql endDelimiter="\n/" splitStatements="true" stripComments="true">
+CREATE OR REPLACE FORCE EDITIONABLE VIEW DOCAI_DOCUMENT_CATEGORY_HIERARCHY_V AS 
+ SELECT category_id,
+       LTRIM(SYS_CONNECT_BY_PATH(REPLACE(category_name,'>', '~'),'>'),'>')
+                      AS category_path,
+       category_name,
+       category_description,
+       active_ind,
+       parent_category_id,
+       handling_procedure,
+       seq_num,
+       LEVEL AS lvl
+  FROM(
+      SELECT category_id,
+             category_name,
+             description  AS category_description,
+             parent_category_id,
+             handling_procedure,
+             active_ind,
+             seq AS seq_num
+        FROM docai_document_category
+       WHERE 1=1
+         AND deleted_ind != 'Y')
+ CONNECT BY PRIOR category_id = parent_category_id
+ START WITH parent_category_id IS NULL
+/
+      </sql>
+   </changeSet>
+</databaseChangeLog>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog 
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns:n0="http://www.oracle.com/xml/ns/dbchangelog-ext" 
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
+	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
+	<changeSet id="docai-constraint-vai_docai_document_labels_fk01" author="VAI" runOnChange="true"  >
+		<preConditions  onFail="MARK_RAN">
+			<sqlCheck  expectedResult="0">select count(*) from user_cons_columns where upper(constraint_name)=upper('vai_docai_document_labels_fk01');</sqlCheck>
+		</preConditions>
+		<n0:createOracleRefConstraint objectName="VAI_DOCAI_DOCUMENT_LABELS_FK01" objectType="REF_CONSTRAINT" ownerName="VAI" replaceIfExists="true" >
+			<n0:source><![CDATA[ALTER TABLE "VAI_DOCAI_DOCUMENT_LABELS" ADD CONSTRAINT "VAI_DOCAI_DOCUMENT_LABELS_FK01" FOREIGN KEY ("DOCUMENT_ID")
+	  REFERENCES "VAI_DOCAI_DOCUMENTS" ("DOCUMENT_ID") ENABLE;]]></n0:source>
+		</n0:createOracleRefConstraint>
+	</changeSet>
+</databaseChangeLog>
