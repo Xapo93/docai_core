@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:n0="http://www.oracle.com/xml/ns/dbchangelog-ext" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
+	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
+	<changeSet id="docai-constraint-docai_service_documents_fk1" author="VAI" failOnError="true" runOnChange="true">
+		<preConditions onFail="MARK_RAN">
+			<sqlCheck expectedResult="0">SELECT COUNT(*)
+  FROM user_constraints c
+  JOIN user_cons_columns cc ON cc.constraint_name = c.constraint_name
+  JOIN user_constraints rc ON rc.constraint_name = c.r_constraint_name
+  JOIN user_cons_columns rcc ON rcc.constraint_name =  rc.constraint_name
+ WHERE c.table_name = 'DOCAI_SERVICE_DOCUMENTS'
+   AND cc.column_name = 'SERVICE_ID'
+   AND c.constraint_type = 'R'
+   AND rc.table_name = 'VAI_SERVICES'
+   AND rcc.column_name = 'SERVICE_ID';</sqlCheck>
+		</preConditions>
+		<n0:createOracleRefConstraint objectName="DOCAI_SERVICE_DOCUMENTS_FK1" objectType="REF_CONSTRAINT" ownerName="VAI">
+			<n0:source><![CDATA[
+  ALTER TABLE "DOCAI_SERVICE_DOCUMENTS" ADD CONSTRAINT "DOCAI_SERVICE_DOCUMENTS_FK1" FOREIGN KEY ("SERVICE_ID")
+	  REFERENCES "VAI_SERVICES" ("SERVICE_ID") ENABLE]]></n0:source>
+		</n0:createOracleRefConstraint>
+	</changeSet>
+</databaseChangeLog>
