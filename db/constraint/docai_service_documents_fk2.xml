@@ -13,7 +13,7 @@
  WHERE c.table_name = 'DOCAI_SERVICE_DOCUMENTS'
    AND cc.column_name = 'DOCUMENT_ID'
    AND c.constraint_type = 'R'
-   AND rc.table_name = 'VAI_SERVICES'
+   AND rc.table_name = 'VAI_DOCAI_DOCUMENTS'
    AND rcc.column_name = 'DOCUMENT_ID';</sqlCheck>
 		</preConditions>
 		<n0:createOracleRefConstraint objectName="DOCAI_SERVICE_DOCUMENTS_FK2" objectType="REF_CONSTRAINT" ownerName="VAI">
