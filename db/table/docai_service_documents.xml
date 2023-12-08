@@ -102,56 +102,6 @@
             </USING_INDEX>
          </PRIMARY_KEY_CONSTRAINT_LIST_ITEM>
       </PRIMARY_KEY_CONSTRAINT_LIST>
-      <FOREIGN_KEY_CONSTRAINT_LIST>
-         <FOREIGN_KEY_CONSTRAINT_LIST_ITEM>
-            <NAME>DOCAI_SERVICE_DOCUMENTS_FK1</NAME>
-            <COL_LIST>
-               <COL_LIST_ITEM>
-                  <NAME>SERVICE_ID</NAME>
-               </COL_LIST_ITEM>
-            </COL_LIST>
-            <REFERENCES>
-               <NAME>VAI_SERVICES</NAME>
-               <COL_LIST>
-                  <COL_LIST_ITEM>
-                     <NAME>SERVICE_ID</NAME>
-                  </COL_LIST_ITEM>
-               </COL_LIST>
-            </REFERENCES>
-         </FOREIGN_KEY_CONSTRAINT_LIST_ITEM>
-         <FOREIGN_KEY_CONSTRAINT_LIST_ITEM>
-            <NAME>DOCAI_SERVICE_DOCUMENTS_FK2</NAME>
-            <COL_LIST>
-               <COL_LIST_ITEM>
-                  <NAME>DOCUMENT_ID</NAME>
-               </COL_LIST_ITEM>
-            </COL_LIST>
-            <REFERENCES>
-               <NAME>VAI_DOCAI_DOCUMENTS</NAME>
-               <COL_LIST>
-                  <COL_LIST_ITEM>
-                     <NAME>DOCUMENT_ID</NAME>
-                  </COL_LIST_ITEM>
-               </COL_LIST>
-            </REFERENCES>
-         </FOREIGN_KEY_CONSTRAINT_LIST_ITEM>
-         <FOREIGN_KEY_CONSTRAINT_LIST_ITEM>
-            <NAME>DOCAI_SERVICE_DOCUMENTS_FK3</NAME>
-            <COL_LIST>
-               <COL_LIST_ITEM>
-                  <NAME>TENANT_ID</NAME>
-               </COL_LIST_ITEM>
-            </COL_LIST>
-            <REFERENCES>
-               <NAME>VAI_TENANTS</NAME>
-               <COL_LIST>
-                  <COL_LIST_ITEM>
-                     <NAME>TENANT_ID</NAME>
-                  </COL_LIST_ITEM>
-               </COL_LIST>
-            </REFERENCES>
-         </FOREIGN_KEY_CONSTRAINT_LIST_ITEM>
-      </FOREIGN_KEY_CONSTRAINT_LIST>
       <DEFAULT_COLLATION>USING_NLS_COMP</DEFAULT_COLLATION>
       <PHYSICAL_PROPERTIES>
          <HEAP_TABLE>
