@@ -13,4 +13,7 @@
   <include relativeToChangelogFile="true" file="docai_document_view_activity_fk02.xml" />
   <include relativeToChangelogFile="true" file="vai_docai_document_extracts_fk01.xml" />
   <include relativeToChangelogFile="true" file="vai_docai_document_extracts_fk02.xml" />
+  <include relativeToChangelogFile="true" file="docai_service_documents_fk1.xml" />
+  <include relativeToChangelogFile="true" file="docai_service_documents_fk2.xml" />
+  <include relativeToChangelogFile="true" file="docai_service_documents_fk3.xml" />
 </databaseChangeLog> 
