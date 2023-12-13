@@ -622,7 +622,7 @@
                 p_filename      => d.document_filename
                 ,p_file_contents => d.document_content
                 ,p_mime_type     => d.document_mime_type
-                ,p_service_key   => 'VAI_DOC_AI'
+                ,p_service_key   => c_service_key
                 ,p_categories    => l_categories
             );
 
