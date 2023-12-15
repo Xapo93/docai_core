@@ -11,6 +11,8 @@
   g_wss_url         VARCHAR2(1000) := vai_config_api.get('VAI_WEB_SOCKET_URL');
   g_wss_wallet      VARCHAR2(1000) := vai_config_api.get('VAI_WEB_SOCKET_WALLET');
   g_wss_wallet_pwd  VARCHAR2(1000) := vai_config_api.get('VAI_WEB_SOCKET_WALLET_PWD');
+  
+  c_service_key     VARCHAR2(100) := 'VAI_DOC_AI';
 
   -------------------------------------------------------------------------------------------------------------------------------
   -------------------------------------------------------------------------------------------------------------------------------
@@ -275,25 +277,31 @@
   )RETURN JSON_OBJECT_T IS
     l_document_response_j       JSON_OBJECT_T;
     l_document                  CLOB;
-    l_document_contents         CLOB;
+    l_document_contents         BLOB;
     l_document_contents_base64  CLOB;
   BEGIN
     SELECT JSON_OBJECT(
              'document_id'              IS d.document_id,
              'filename'                 IS d.document_filename,  
              'mime_type'                IS d.document_mime_type,
-             'status'                   IS d.status
+             'status'                   IS d.status,
+             'org_code'                 IS o.code,
+             'location_code'            IS l.location_code,
+             'department_code'          IS de.department_code
               RETURNING CLOB
           ) AS document
          ,d.document_content
      INTO l_document
          ,l_document_contents
      FROM vai_docai_documents d
+     LEFT JOIN vai_orgs o on d.org_id = o.org_id
+     LEFT JOIN vai_locations l on d.location_id = l.location_id
+     LEFT JOIN vai_departments de on d.department_id = de.department_id
     WHERE d.tenant_id = p_tenant_id
       AND d.document_id = p_document_id
       AND d.deleted_ind != 'Y';
 
-    l_document_contents_base64 := clob_to_base64(l_document_contents);
+    l_document_contents_base64 := blob_to_clob_base64(l_document_contents);
 
     l_document_response_j := JSON_OBJECT_T(l_document);
     l_document_response_j.put('document_content_base64', l_document_contents_base64);
@@ -614,7 +622,7 @@
                 p_filename      => d.document_filename
                 ,p_file_contents => d.document_content
                 ,p_mime_type     => d.document_mime_type
-                ,p_service_key   => 'VAI_AP'
+                ,p_service_key   => c_service_key
                 ,p_categories    => l_categories
             );
 
@@ -1431,6 +1439,70 @@
   -------------------------------------------------------------------------------------------------------------------------------
   -------------------------------------------------------------------------------------------------------------------------------  
 
+  FUNCTION get_org_id(p_code IN VARCHAR2)
+  RETURN NUMBER
+  IS
+    l_id        NUMBER;
+  BEGIN
+    SELECT org_id INTO l_id
+    FROM vai_orgs
+    WHERE UPPER(code) = UPPER(p_code);
+    
+    RETURN l_id;
+    
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RETURN NULL;
+  END;
+  
+  FUNCTION get_location_id(p_code IN VARCHAR2)
+  RETURN NUMBER
+  IS
+    l_id        NUMBER;
+  BEGIN
+    SELECT location_id INTO l_id
+    FROM vai_locations
+    WHERE UPPER(location_code) = UPPER(p_code);
+    
+    RETURN l_id;
+    
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RETURN NULL;
+  END;
+  
+  FUNCTION get_dept_id(p_code IN VARCHAR2)
+  RETURN NUMBER
+  IS
+    l_id        NUMBER;
+  BEGIN
+    SELECT department_id INTO l_id
+    FROM vai_departments
+    WHERE UPPER(department_code) = UPPER(p_code);
+    
+    RETURN l_id;
+    
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RETURN NULL;
+  END;
+  
+  FUNCTION get_service_id(p_service_key IN VARCHAR2)
+  RETURN NUMBER
+  IS
+    l_id        NUMBER;
+  BEGIN
+    SELECT service_id INTO l_id
+    FROM vai_services
+    WHERE UPPER(service_key) = UPPER(p_service_key);
+    
+    RETURN l_id;
+    
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RETURN NULL;
+  END;
+  
   PROCEDURE process_webhook(p_content_body          IN CLOB) 
   IS
     l_res                   JSON_OBJECT_T;
@@ -1442,6 +1514,15 @@
     l_document_id           NUMBER;
     l_extract_id            NUMBER;
     l_tenant_id             NUMBER;
+    l_document_base64       CLOB;
+    l_batch_id              VARCHAR2(4000);
+    l_filename              VARCHAR2(4000);
+    l_mimetype              VARCHAR2(128);
+    l_org_id                NUMBER;
+    l_location_id           NUMBER;
+    l_department_id         NUMBER;
+    l_services              apex_application_global.n_arr;
+    l_service_key           VARCHAR2(100);
     l_wss_data json_object_t;
   BEGIN
     l_res := JSON_OBJECT_T.parse(p_content_body);
@@ -1467,7 +1548,6 @@
                 WHEN NO_DATA_FOUND THEN
                     NULL;
         END;
-        dbms_output.put_line('l_extract_id: '||l_extract_id);
         IF l_extract_id IS NULL THEN
             IF l_res.get_object('payload').get_string('extract_type') = 'GENERAL_CLASSIFICATION' THEN
                 l_res_extract := l_res.get_object('payload').get_object('extract');
@@ -1525,6 +1605,29 @@
                ,p_data   => l_wss_data
             );
         END IF;
+    END IF;
+    
+    IF l_res.get_string('notification_type') = 'NEW_EMAIL_INBOUND_DOCUMENT' THEN
+        l_filename := l_res.get_object('payload').get_string('filename');
+        l_mimetype := l_res.get_object('payload').get_string('mime_type');
+        l_document_base64 := l_res.get_object('payload').get_clob('document_content_base64');
+        l_tenant_id := l_res.get_object('payload').get_number('tenant_id');
+        l_org_id := get_org_id(l_res.get_object('payload').get_string('org_code'));
+        l_location_id := get_location_id(l_res.get_object('payload').get_string('location_code'));
+        l_department_id := get_dept_id(l_res.get_object('payload').get_string('department_code'));
+        l_service_key := get_dept_id(l_res.get_object('payload').get_string('service_key'));
+        l_services(1) := get_service_id(l_service_key);
+        
+        l_document_id := process_document(p_tenant_id     => l_tenant_id
+                          ,p_filename      => l_filename
+                          ,p_content       => base64_clob_to_blob(l_document_base64)
+                          ,p_mime_type     => l_mimetype
+                          ,p_org_id        => l_org_id
+                          ,p_location_id   => l_location_id
+                          ,p_department_id => l_department_id
+                          ,p_services      => l_services
+                          ,p_batch_id      => l_batch_id);
+                          
     END IF;
   END;
 
