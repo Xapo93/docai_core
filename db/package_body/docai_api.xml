@@ -1607,7 +1607,7 @@
         END IF;
     END IF;
     
-    IF l_res.get_string('notification_type') = 'NEW_EMAIL_INBOUND_DOCUMENT' THEN
+    IF l_res.get_string('notification_type') = 'EMAIL_INBOUND_NEW_EMAIL' THEN
         l_filename := l_res.get_object('payload').get_string('filename');
         l_mimetype := l_res.get_object('payload').get_string('mime_type');
         l_document_base64 := l_res.get_object('payload').get_clob('document_content_base64');
