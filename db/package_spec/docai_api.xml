@@ -6,7 +6,7 @@
 	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
 	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
 	<changeSet id="docai-package_spec-docai_api" author="VAI" failOnError="true" runOnChange="true"    >
-		<n0:createOraclePackageSpec objectName="DOCAI_API" objectType="package_spec" ownerName="VAI"   >
+		<n0:createOraclePackageSpec objectName="DOCAI_API" objectType="package_spec" ownerName="VAI" replaceIfExists="true">
 			<n0:source><![CDATA[CREATE OR REPLACE EDITIONABLE PACKAGE "DOCAI_API" AS
   g_by_system CONSTANT VARCHAR2(128) := 'SYSTEM';
   -------------------------------------------------------------------------------------------------------------------------------
