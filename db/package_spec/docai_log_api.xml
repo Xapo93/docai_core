@@ -4,7 +4,7 @@
   xmlns:n0="http://www.oracle.com/xml/ns/dbchangelog-ext" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
 	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
   <changeSet id="docai-package_spec-docai_log_api" author="VAI" runOnChange="true">
-    <n0:createOraclePackageSpec objectName="DOCAI_LOG_API" objectType="package_spec" ownerName="VAI">
+    <n0:createOraclePackageSpec objectName="DOCAI_LOG_API" objectType="package_spec" ownerName="VAI" replaceIfExists="true">
       <n0:source><![CDATA[CREATE OR REPLACE EDITIONABLE PACKAGE "DOCAI_LOG_API" as
   PROCEDURE log(
     p_action            VARCHAR2,

@@ -6,7 +6,7 @@
 	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
 	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
 	<changeSet id="docai-trigger-docai_document_view_activity_bu" author="VAI" failOnError="true" runOnChange="true"    >
-		<n0:createOracleTrigger objectName="DOCAI_DOCUMENT_VIEW_ACTIVITY_BU" objectType="trigger" ownerName="VAI"   >
+		<n0:createOracleTrigger objectName="DOCAI_DOCUMENT_VIEW_ACTIVITY_BU" objectType="trigger" ownerName="VAI" replaceIfExists="true">
 			<n0:source><![CDATA[CREATE OR REPLACE EDITIONABLE TRIGGER "DOCAI_DOCUMENT_VIEW_ACTIVITY_BU" 
 BEFORE UPDATE
 ON docai_document_view_activity

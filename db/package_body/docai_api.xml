@@ -6,7 +6,7 @@
 	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
 	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
 	<changeSet id="docai-package_body-docai_api" author="VAI" failOnError="true" runOnChange="true"    >
-		<n0:createOraclePackageBody objectName="DOCAI_API" objectType="package_body" ownerName="VAI"   >
+		<n0:createOraclePackageBody objectName="DOCAI_API" objectType="package_body" ownerName="VAI" replaceIfExists="true">
 			<n0:source><![CDATA[CREATE OR REPLACE EDITIONABLE PACKAGE BODY "DOCAI_API" AS
   g_wss_url         VARCHAR2(1000) := vai_config_api.get('VAI_WEB_SOCKET_URL');
   g_wss_wallet      VARCHAR2(1000) := vai_config_api.get('VAI_WEB_SOCKET_WALLET');
