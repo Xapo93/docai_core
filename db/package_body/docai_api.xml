@@ -1446,14 +1446,11 @@
     SELECT org_id INTO l_id
     FROM vai_orgs
     WHERE UPPER(code) = UPPER(p_code);
-    
     RETURN l_id;
-    
     EXCEPTION
         WHEN NO_DATA_FOUND THEN
             RETURN NULL;
   END;
-  
   FUNCTION get_location_id(p_code IN VARCHAR2)
   RETURN NUMBER
   IS
@@ -1462,14 +1459,11 @@
     SELECT location_id INTO l_id
     FROM vai_locations
     WHERE UPPER(location_code) = UPPER(p_code);
-    
     RETURN l_id;
-    
     EXCEPTION
         WHEN NO_DATA_FOUND THEN
             RETURN NULL;
   END;
-  
   FUNCTION get_dept_id(p_code IN VARCHAR2)
   RETURN NUMBER
   IS
@@ -1478,14 +1472,11 @@
     SELECT department_id INTO l_id
     FROM vai_departments
     WHERE UPPER(department_code) = UPPER(p_code);
-    
     RETURN l_id;
-    
     EXCEPTION
         WHEN NO_DATA_FOUND THEN
             RETURN NULL;
   END;
-  
   FUNCTION get_service_id(p_service_key IN VARCHAR2)
   RETURN NUMBER
   IS
@@ -1494,14 +1485,11 @@
     SELECT service_id INTO l_id
     FROM vai_services
     WHERE UPPER(service_key) = UPPER(p_service_key);
-    
     RETURN l_id;
-    
     EXCEPTION
         WHEN NO_DATA_FOUND THEN
             RETURN NULL;
   END;
-  
   PROCEDURE process_webhook(p_content_body          IN CLOB) 
   IS
     l_res                   JSON_OBJECT_T;
@@ -1616,7 +1604,7 @@
         l_department_id := get_dept_id(l_res.get_object('payload').get_string('department_code'));
         l_service_key := l_res.get_object('payload').get_string('service_key');
         l_services(1) := get_service_id(l_service_key);
-        
+
         l_document_id := process_document(p_tenant_id     => l_tenant_id
                           ,p_filename      => l_filename
                           ,p_content       => base64_clob_to_blob(l_document_base64)
@@ -1626,13 +1614,34 @@
                           ,p_department_id => l_department_id
                           ,p_services      => l_services
                           ,p_batch_id      => l_batch_id);
-                          
+
+    END IF;
+    
+    IF l_res.get_string('notification_type') = 'GDRIVE_INBOUND_NEW_FILE' THEN
+        l_filename := l_res.get_object('payload').get_string('filename');
+        l_mimetype := l_res.get_object('payload').get_string('mime_type');
+        l_document_base64 := l_res.get_object('payload').get_clob('document_content_base64');
+        l_tenant_id := l_res.get_object('payload').get_number('tenant_id');
+        l_org_id := get_org_id(l_res.get_object('payload').get_string('org_code'));
+        l_location_id := get_location_id(l_res.get_object('payload').get_string('location_code'));
+        l_department_id := get_dept_id(l_res.get_object('payload').get_string('department_code'));
+        l_service_key := l_res.get_object('payload').get_string('service_key');
+        l_services(1) := get_service_id(l_service_key);
+        l_document_id := process_document(p_tenant_id     => l_tenant_id
+                          ,p_filename      => l_filename
+                          ,p_content       => base64_clob_to_blob(l_document_base64)
+                          ,p_mime_type     => l_mimetype
+                          ,p_org_id        => l_org_id
+                          ,p_location_id   => l_location_id
+                          ,p_department_id => l_department_id
+                          ,p_services      => l_services
+                          ,p_batch_id      => l_batch_id);
+
     END IF;
   END;
 
-
-
-END DOCAI_API;]]></n0:source>
+END DOCAI_API;
+/]]></n0:source>
 		</n0:createOraclePackageBody>
 	</changeSet>
 </databaseChangeLog>
