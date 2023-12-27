@@ -924,7 +924,6 @@
    ,p_service_id      IN NUMBER
    ,p_tenant_id       IN NUMBER
   )IS
-    PRAGMA AUTONOMOUS_TRANSACTION;
   BEGIN
     IF p_service_id IS NOT NULL THEN
       INSERT INTO docai_service_documents(document_id, service_id, tenant_id)
@@ -1039,7 +1038,7 @@
                              p_tenant_id        => p_tenant_id);
         END LOOP;
       END IF;
-
+      COMMIT;
     ELSE
       RAISE_APPLICATION_ERROR(-20001, 'Document AI service is not enabled for the tenancy');
     END IF;
@@ -1564,7 +1563,7 @@
                 l_status := l_res.get_object('payload').get_string('status');
 
                 UPDATE vai_docai_document_extracts
-                SET status = l_status
+                SET status = l_status 
                 WHERE docai_ref_extract_id = l_docai_ref_extract_id;
 
                 UPDATE vai_docai_documents
