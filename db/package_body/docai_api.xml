@@ -1555,7 +1555,7 @@
                    ,p_document_id         => l_document_id
                    ,p_extract_provider_id => NULL
                    ,p_name                => 'General Classification'
-                   ,p_extract_type        => 'CLASSIFICATION'
+                   ,p_extract_type        => 'GENERAL_CLASSIFICATION'
                    ,p_response            => l_res_extract.to_Clob
                    ,p_docai_ref_extract_id      => l_docai_ref_extract_id
                    ,p_skip_enqueue        => TRUE);
@@ -1563,7 +1563,7 @@
                 l_status := l_res.get_object('payload').get_string('status');
 
                 UPDATE vai_docai_document_extracts
-                SET status = l_status
+                SET status = l_status 
                 WHERE docai_ref_extract_id = l_docai_ref_extract_id;
 
                 UPDATE vai_docai_documents
