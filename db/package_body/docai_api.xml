@@ -6,7 +6,7 @@
 	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
 	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
 	<changeSet id="docai-package_body-docai_api" author="VAI" failOnError="true" runOnChange="true"    >
-		<n0:createOraclePackageBody objectName="DOCAI_API" objectType="package_body" ownerName="VAI"   >
+		<n0:createOraclePackageBody objectName="DOCAI_API" objectType="package_body" ownerName="VAI" replaceIfExists="true">
 			<n0:source><![CDATA[CREATE OR REPLACE EDITIONABLE PACKAGE BODY "DOCAI_API" AS
   g_wss_url         VARCHAR2(1000) := vai_config_api.get('VAI_WEB_SOCKET_URL');
   g_wss_wallet      VARCHAR2(1000) := vai_config_api.get('VAI_WEB_SOCKET_WALLET');
@@ -1606,7 +1606,7 @@
         END IF;
     END IF;
     
-    IF l_res.get_string('notification_type') = 'NEW_EMAIL_INBOUND_DOCUMENT' THEN
+    IF l_res.get_string('notification_type') = 'EMAIL_INBOUND_NEW_EMAIL' THEN
         l_filename := l_res.get_object('payload').get_string('filename');
         l_mimetype := l_res.get_object('payload').get_string('mime_type');
         l_document_base64 := l_res.get_object('payload').get_clob('document_content_base64');
@@ -1628,9 +1628,29 @@
                           ,p_batch_id      => l_batch_id);
 
     END IF;
+    
+    IF l_res.get_string('notification_type') = 'GDRIVE_INBOUND_NEW_FILE' THEN
+        l_filename := l_res.get_object('payload').get_string('filename');
+        l_mimetype := l_res.get_object('payload').get_string('mime_type');
+        l_document_base64 := l_res.get_object('payload').get_clob('document_content_base64');
+        l_tenant_id := l_res.get_object('payload').get_number('tenant_id');
+        l_org_id := get_org_id(l_res.get_object('payload').get_string('org_code'));
+        l_location_id := get_location_id(l_res.get_object('payload').get_string('location_code'));
+        l_department_id := get_dept_id(l_res.get_object('payload').get_string('department_code'));
+        l_service_key := l_res.get_object('payload').get_string('service_key');
+        l_services(1) := get_service_id(l_service_key);
+        l_document_id := process_document(p_tenant_id     => l_tenant_id
+                          ,p_filename      => l_filename
+                          ,p_content       => base64_clob_to_blob(l_document_base64)
+                          ,p_mime_type     => l_mimetype
+                          ,p_org_id        => l_org_id
+                          ,p_location_id   => l_location_id
+                          ,p_department_id => l_department_id
+                          ,p_services      => l_services
+                          ,p_batch_id      => l_batch_id);
+
+    END IF;
   END;
-
-
 
 END DOCAI_API;]]></n0:source>
 		</n0:createOraclePackageBody>
