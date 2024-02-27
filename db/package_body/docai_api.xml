@@ -287,7 +287,8 @@
              'status'                   IS d.status,
              'org_code'                 IS o.code,
              'location_code'            IS l.location_code,
-             'department_code'          IS de.department_code
+             'department_code'          IS de.department_code,
+             'status_reason'            IS d.STATUS_ADDITIONAL_INFO
               RETURNING CLOB
           ) AS document
          ,d.document_content
@@ -301,7 +302,11 @@
       AND d.document_id = p_document_id
       AND d.deleted_ind != 'Y';
 
-    l_document_contents_base64 := blob_to_clob_base64(l_document_contents);
+    IF dbms_lob.getlength(l_document_contents) > 0 then
+      l_document_contents_base64 := blob_to_clob_base64(l_document_contents);
+    else
+      l_document_contents_base64:='';
+    end if;
 
     l_document_response_j := JSON_OBJECT_T(l_document);
     l_document_response_j.put('document_content_base64', l_document_contents_base64);
