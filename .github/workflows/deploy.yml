@@ -1,0 +1,63 @@
+name: Liquibase Workflow
+
+on:
+  workflow_call:
+    inputs:
+      BRANCH:
+        description: Branch to checkout for deployment
+        required: true
+        type: string
+      DB_HOST:
+        description: Database Host IP/name
+        required: true
+        type: string
+      DB_SERVICE_NAME:
+        description: Database Service Name
+        required: true
+        type: string
+      DB_USER:
+        description: Database user
+        type: string
+        required: true
+    secrets:
+      DB_PASSWORD:
+        description: Database password 
+        required: true
+      
+
+jobs:
+  connect_and_run_sql:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          repository: viscosityai/documentai_core
+          ref: ${{inputs.BRANCH}}
+        
+    #   - name: Setup Oracle SQLcl
+    #     uses: gvenzl/setup-oracle-sqlcl@v1
+
+      - name: Deploy with Liquibase
+        env:
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_HOST: ${{inputs.DB_HOST}}
+          DB_SERVICE_NAME: ${{inputs.DB_SERVICE_NAME}}
+        run: |
+          echo "Starting deployment for $DB_HOST/$DB_SERVICE_NAME"
+          echo $DB_PASSWORD > pwd.txt
+          echo "SET SQLFORMAT ANSICONSOLE" > commands.sql
+          echo "liquibase update -changelog-file core/db/controller.xml" >> commands.sql
+          echo "EXIT;" >> commands.sql
+          sql $DB_USER@$DB_HOST/$DB_SERVICE_NAME @commands.sql < pwd.txt > out.txt
+          rm pwd.txt
+          rm commands.sql
+      - name: Check output for validation errors
+        run: |
+          if grep -q "liquibase.exception.ValidationFailedException: Validation Failed:" out.txt; then
+            echo "Validation error found in output from liquibase."
+            exit 1
+          else
+            echo "No validation errors found."
+          fi
