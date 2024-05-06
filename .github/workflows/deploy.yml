@@ -50,7 +50,7 @@ jobs:
           echo "SET SQLFORMAT ANSICONSOLE" > commands.sql
           echo "liquibase update -changelog-file core/db/controller.xml" >> commands.sql
           echo "EXIT;" >> commands.sql
-          sql $DB_USER/$DB_PASSWORD@$DB_HOST/$DB_SERVICE_NAME @commands.sq > out.txt
+          sql $DB_USER/$DB_PASSWORD@$DB_HOST/$DB_SERVICE_NAME @commands.sql > out.txt
           rm commands.sql
       - name: Check output for validation errors
         run: |
