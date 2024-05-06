@@ -46,6 +46,7 @@ jobs:
           DB_HOST: ${{inputs.DB_HOST}}
           DB_SERVICE_NAME: ${{inputs.DB_SERVICE_NAME}}
         run: |
+          cd db
           echo "Starting deployment for $DB_HOST/$DB_SERVICE_NAME"
           echo "SET SQLFORMAT ANSICONSOLE" > commands.sql
           echo "liquibase update -changelog-file core/db/controller.xml" >> commands.sql
