@@ -19,10 +19,11 @@ on:
         description: Database user
         type: string
         required: true
-    secrets:
       DB_PASSWORD:
         description: Database password 
         required: true
+        type: string
+      
       
 
 jobs:
@@ -41,7 +42,7 @@ jobs:
       - name: Deploy with Liquibase
         env:
           DB_USER: ${{ inputs.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_PASSWORD: ${{ inputs.DB_PASSWORD }}
           DB_HOST: ${{inputs.DB_HOST}}
           DB_SERVICE_NAME: ${{inputs.DB_SERVICE_NAME}}
         run: |
