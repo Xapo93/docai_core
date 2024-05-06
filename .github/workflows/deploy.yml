@@ -57,6 +57,8 @@ jobs:
           if grep -q "liquibase.exception.ValidationFailedException: Validation Failed:" out.txt; then
             echo "Validation error found in output from liquibase."
             exit 1
-          else
-            echo "No validation errors found."
+          fi
+          if grep -q "SP2-" out.txt; then
+            echo "Exception found in output"
+            exit 1
           fi
