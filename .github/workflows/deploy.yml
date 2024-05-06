@@ -49,7 +49,7 @@ jobs:
           cd db
           echo "Starting deployment for $DB_HOST/$DB_SERVICE_NAME"
           echo "SET SQLFORMAT ANSICONSOLE" > commands.sql
-          echo "liquibase update -changelog-file core/db/controller.xml" >> commands.sql
+          echo "liquibase update -changelog-file controller.xml" >> commands.sql
           echo "EXIT;" >> commands.sql
           sql $DB_USER/$DB_PASSWORD@$DB_HOST/$DB_SERVICE_NAME @commands.sql > out.txt
           rm commands.sql
