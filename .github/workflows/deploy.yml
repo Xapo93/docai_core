@@ -67,3 +67,4 @@ jobs:
             echo "Exception found in output"
             exit 1
           fi
+          cat out.txt
