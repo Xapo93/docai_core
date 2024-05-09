@@ -67,4 +67,5 @@ jobs:
             echo "Exception found in output"
             exit 1
           fi
+          echo "Deployment successful!"
           cat out.txt
