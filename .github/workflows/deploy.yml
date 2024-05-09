@@ -55,8 +55,6 @@ jobs:
           sql $DB_USER/$DB_PASSWORD@$DB_HOST/$DB_SERVICE_NAME @commands.sql > out.txt
           echo "Cleaning up"
           rm commands.sql
-      - name: Check output for validation errors
-        run: |
           echo "Checking for validation errors"
           if grep -q "liquibase.exception.ValidationFailedException: Validation Failed:" out.txt; then
             echo "Validation error found in output from liquibase."
