@@ -35,6 +35,8 @@ jobs:
         with:
           repository: viscosityai/documentai_core
           ref: ${{inputs.BRANCH}}
+          token: ${{ secrets.DEPLOY_PAT }}
+          
         
       - name: Setup Oracle SQLcl
         uses: gvenzl/setup-oracle-sqlcl@v1
