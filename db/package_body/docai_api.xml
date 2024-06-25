@@ -228,6 +228,58 @@
         );
   END;
 
+  PROCEDURE send_oci_error_notification (p_title IN VARCHAR2
+                                        ,p_message IN VARCHAR2)
+  AS
+    l_wallet_path               VARCHAR2(4000) := vai_config_api.get('OCI_NOTIFICATIONS_WALLET');
+    l_wallet_pwd                VARCHAR2(4000) := vai_config_api.get('OCI_NOTIFICATIONS_WALLET_PWD');
+    l_tenancy_ocid              VARCHAR2(4000) := vai_config_api.get('OCI_TENANCY');
+    l_user_ocid                 VARCHAR2(4000) := vai_config_api.get('OCI_USER');
+    l_fingerprint               VARCHAR2(4000) := vai_config_api.get('OCI_FINGERPRINT');
+    l_private_key               VARCHAR2(4000) := vai_config_api.get('OCI_PRIVATE_KEY');
+    l_region                    VARCHAR2(4000) := vai_config_api.get('OCI_REGION');
+    l_compartment               VARCHAR2(4000) := vai_config_api.get('OCI_COMPARTMENT');
+    l_topic_id                  VARCHAR2(4000) := vai_config_api.get('OCI_NOTIFICATION_ERROR_TOPICID');
+
+    l_response_json CLOB;
+  BEGIN
+    oci_notifications.set_wallet(p_wallet  => l_wallet_path,
+                                 p_wallet_pwd  => l_wallet_pwd);
+    
+    oci_notifications.set_credentials(p_tenancy_ocid  => l_tenancy_ocid,
+                                      p_user_ocid  => l_user_ocid,
+                                      p_fingerprint  => l_fingerprint,
+                                      p_private_key  => l_private_key,
+                                      p_region  => l_region,
+                                      p_compartment_ocid  => l_compartment);
+                                    
+    l_response_json := oci_notifications.send_notification(p_title  => p_title,
+                                                           p_message  => p_message,
+                                                           p_topic => l_topic_id);
+  
+    docai_log_api.log(
+              p_action            => ''
+             ,p_source_id         => -1
+             ,p_type              => 'DOCAI_DOCUMENT'
+             ,p_log_lvl           => 'DEBUG'
+             ,p_description       => 'response'||l_response_json
+             ,p_title             => 'response'
+            );
+
+    EXCEPTION
+      WHEN OTHERS THEN
+        docai_log_api.log(
+              p_action            => ''
+             ,p_source_id         => -1
+             ,p_type              => 'DOCAI_DOCUMENT'
+             ,p_log_lvl           => 'ERROR'
+             ,p_description       => 'Error sending OCI notification '||p_message
+             ,p_title             => 'Unexpected error occurred when sending OCI notification'
+             ,p_status_reason     => SQLERRM
+             ,p_status_stacktrace => DBMS_UTILITY.FORMAT_ERROR_BACKTRACE
+            );
+  END send_oci_error_notification;
+
   PROCEDURE process_streaming_callback(p_tenant_id    IN NUMBER,
                                        p_document_id  IN NUMBER,
                                        p_extract_id   IN NUMBER,
@@ -851,6 +903,17 @@
        WHERE tenant_id = p_tenant_id
          AND document_id = p_document_id;
       COMMIT;
+
+      DECLARE
+          l_tenant_name VARCHAR2(1000);
+        begin
+        select tenant_name into l_tenant_name
+        from vai_tenants
+        where tenant_id = p_tenant_id;
+
+        send_oci_error_notification(p_title => 'Error while assigning category to a document for tenant: '||l_tenant_name,
+                                p_message => 'There was an error processing a document ID: '||p_document_id||', Error reason: '||l_status_additional_info);
+      end;
 
       notify_wss(
         p_room  => l_wss_room
