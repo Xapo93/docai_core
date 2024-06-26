@@ -1,0 +1,73 @@
+name: Liquibase Workflow
+
+on:
+  workflow_call:
+    inputs:
+      BRANCH:
+        description: Branch to checkout for deployment
+        required: true
+        type: string
+      DB_HOST:
+        description: Database Host IP/name
+        required: true
+        type: string
+      DB_SERVICE_NAME:
+        description: Database Service Name
+        required: true
+        type: string
+      DB_USER:
+        description: Database user
+        type: string
+        required: true
+      DB_PASSWORD:
+        description: Database password 
+        required: true
+        type: string
+      
+      
+
+jobs:
+  connect_and_run_sql:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          repository: viscosityai/documentai_core
+          ref: ${{inputs.BRANCH}}
+          token: ${{ secrets.DEPLOY_PAT }}
+          
+        
+      - name: Setup Oracle SQLcl
+        uses: gvenzl/setup-oracle-sqlcl@v1
+
+      - name: Deploy with Liquibase
+        env:
+          DB_USER: ${{ inputs.DB_USER }}
+          DB_PASSWORD: ${{ inputs.DB_PASSWORD }}
+          DB_HOST: ${{inputs.DB_HOST}}
+          DB_SERVICE_NAME: ${{inputs.DB_SERVICE_NAME}}
+        run: |
+          cd db
+          echo "Starting deployment for $DB_HOST/$DB_SERVICE_NAME"
+          echo "SET SQLFORMAT ANSICONSOLE" > commands.sql
+          echo "liquibase update -changelog-file controller.xml" >> commands.sql
+          echo "EXIT;" >> commands.sql
+          echo "Connecting to database"
+          sql $DB_USER/$DB_PASSWORD@$DB_HOST/$DB_SERVICE_NAME @commands.sql > out.txt
+          echo "Cleaning up"
+          rm commands.sql
+          echo "Checking for validation errors"
+          if grep -q "liquibase.exception.ValidationFailedException: Validation Failed:" out.txt; then
+            echo "Validation error found in output from liquibase."
+            exit 1
+          fi
+          echo "Checking for exceptions"
+          if grep -q "SP2-" out.txt; then
+            echo "Exception found in output"
+            exit 1
+          fi
+          echo "Deployment successful!"
+          echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+          cat out.txt
+          echo "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
